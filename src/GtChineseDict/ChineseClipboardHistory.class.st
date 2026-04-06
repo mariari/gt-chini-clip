@@ -69,16 +69,18 @@ ChineseClipboardHistory >> gtHistoryFor: aView [
 		priority: 5;
 		updateWhen: ValueChanged in: [ clipboard announcer ];
 		items: [ entries reversed ];
-		column: 'Text' text: [ :e |
-			| colored |
+		column: 'Text' text: [ :text |
+			| words colored |
+			words := clipboard dict segment: text.
 			colored := '' asRopedText.
-			e value do: [ :w | colored := colored , (w toneColoredText fontName: cjkFont) ].
+			words do: [ :w | colored := colored , (w toneColoredText fontName: cjkFont) ].
 			colored fontSize: 16 ];
-		column: 'Words' text: [ :e | e value size asString ] width: 50;
-		send: [ :e |
+		column: 'Words' text: [ :text |
+			(clipboard dict segment: text) size asString ] width: 50;
+		send: [ :text |
 			| tool |
 			tool := ChineseClipboard new dict: clipboard dict.
-			tool processText: e key.
+			tool processText: text.
 			tool ]
 ]
 
@@ -100,7 +102,8 @@ ChineseClipboardHistory >> onClipboardChanged [
 	clipboard words ifNotNil: [ :w |
 		| fullText |
 		fullText := '' join: (w collect: #text).
-		entries add: fullText -> w copy ]
+		(entries isEmpty or: [ entries last ~= fullText ])
+			ifTrue: [ entries add: fullText ] ]
 ]
 
 { #category : 'printing' }

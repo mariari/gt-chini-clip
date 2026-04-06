@@ -160,7 +160,7 @@ ChineseDictExamples >> historyWithEntries [
 	tool := self clipboardProcessText.
 	history := ChineseClipboardHistory on: tool.
 	self assert: history entries size equals: 1.
-	self assert: history entries first key equals: '今天你好'.
+	self assert: history entries first equals: '今天你好'.
 	tool processText: '天氣很好'.
 	self assert: history entries size equals: 2.
 	^ history
