@@ -39,9 +39,7 @@ ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bop
 				evt consumed: true.
 				evt currentTarget phlow spawnObject: word ].
 		word isKnown ifTrue: [
-			chip addAptitude: ((BrGlamorousWithTooltipAptitude content: [
-				BrLabel new aptitude: (BrGlamorousLabelAptitude new fontSize: 16);
-					text: word definition ]) showDelay: 200 milliSeconds) ].
+			chip addAptitude: word tooltipAptitude ].
 		chip addChild: (BrLabel new
 			aptitude: (BrGlamorousLabelAptitude new fontSize: charSize);
 			text: (word toneColoredText fontName: cjkFont)).

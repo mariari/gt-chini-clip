@@ -38,6 +38,15 @@ ChineseWord >> entries: aCollection [
 	entries := aCollection
 ]
 
+{ #category : 'accessing' }
+ChineseWord >> tooltipAptitude [
+	"I return a tooltip aptitude showing my definition on hover."
+	^ (BrGlamorousWithExplicitTooltipAptitude content: [
+		BrLabel new
+			aptitude: (BrGlamorousLabelAptitude new fontSize: 16);
+			text: self definition ]) showDelay: 200 milliSeconds
+]
+
 { #category : 'gt-views' }
 ChineseWord >> gtDefinitionsFor: aView [
 	<gtView>
