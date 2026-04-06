@@ -122,8 +122,8 @@ CeDict >> longestMatchAt: pos in: aString [
 			candidate := aString copyFrom: pos to: end.
 			matches := self lookup: candidate.
 			matches ifNotEmpty: [
-				^ ChineseWord text: candidate entries: matches ] ] ].
-	^ ChineseWord text: (aString at: pos) asString entries: #()
+				^ ChineseWord text: candidate entries: matches dict: self ] ] ].
+	^ ChineseWord text: (aString at: pos) asString entries: #() dict: self
 ]
 
 { #category : 'accessing' }
@@ -167,5 +167,5 @@ CeDict >> size [
 { #category : 'accessing' }
 CeDict >> word: aString [
 	"I return a ChineseWord for a string."
-	^ ChineseWord text: aString entries: (self lookup: aString)
+	^ ChineseWord text: aString entries: (self lookup: aString) dict: self
 ]

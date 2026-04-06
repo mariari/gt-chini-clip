@@ -97,6 +97,22 @@ ChineseDictExamples >> segmentUnknownCharacter [
 	^ words
 ]
 
+{ #category : 'examples - word' }
+ChineseDictExamples >> wordBreakdown [
+	<gtExample>
+	"I prove a compound word breaks down into its characters."
+	| words word parts |
+	words := self segmentGreedyLongestMatch.
+	word := words first.
+	self assert: word text equals: '你好'.
+	parts := word breakdown.
+	self assert: parts size equals: 2.
+	self assert: parts first text equals: '你'.
+	self assert: parts first definition equals: 'you'.
+	self assert: parts second text equals: '好'.
+	^ parts
+]
+
 { #category : 'examples - tone color' }
 ChineseDictExamples >> toneColors [
 	<gtExample>
