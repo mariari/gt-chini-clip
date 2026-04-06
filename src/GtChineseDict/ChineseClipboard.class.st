@@ -25,6 +25,11 @@ ChineseClipboard >> announcer [
 
 { #category : 'private' }
 ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize [
+	self buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: nil
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: chipMap [
 	| flow |
 	flow := BrHorizontalFlow new
 		hMatchParent; vFitContent;
@@ -47,18 +52,26 @@ ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bop
 			chip addChild: (BrLabel new
 				aptitude: (BrGlamorousLabelAptitude new fontSize: bopoSize);
 				text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
+		chipMap ifNotNil: [ chipMap at: word put: chip ].
 		flow addChild: chip ].
 	aPane addChild: flow
 ]
 
 { #category : 'private' }
 ChineseClipboard >> buildWordListIn: aPane font: cjkFont [
-	| list |
+	self buildWordListIn: aPane font: cjkFont chipMap: nil
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildWordListIn: aPane font: cjkFont chipMap: chipMap [
+	| list knownWords lastHighlight |
+	knownWords := words select: #isKnown.
+	lastHighlight := nil.
 	list := BrColumnedList new matchParent.
 	(list column title: 'Word'; width: 120)
 		stencil: [ :w :col |
 			BrLabel new aptitude: BrGlamorousLabelAptitude new;
-				text: ((w toneColoredText fontName: cjkFont) fontSize: 18) ].
+				text: ((w toneColoredText fontName: cjkFont) fontSize: 20) ].
 	(list column title: 'BoPoMoFo'; width: 120)
 		stencil: [ :w :col |
 			BrLabel new aptitude: BrGlamorousLabelAptitude new;
@@ -67,10 +80,21 @@ ChineseClipboard >> buildWordListIn: aPane font: cjkFont [
 		stencil: [ :w :col |
 			BrLabel new aptitude: BrGlamorousLabelAptitude new;
 				text: w definition ].
-	list items: (words select: #isKnown).
+	list items: knownWords.
 	list when: BrSelectionDoubleClicked do: [ :evt |
-		evt selection do: [ :idx |
-			list phlow spawnObject: (list items at: idx) ] ].
+		evt selection do: [ :each |
+			list phlow spawnObject: (list items at: each) ] ].
+	chipMap ifNotNil: [
+		list when: BrSelectionChanged do: [ :evt |
+			lastHighlight ifNotNil: [ lastHighlight background: Color transparent ].
+			evt selectedDo: [ :interval |
+				| word chip idx |
+				idx := interval isInteger ifTrue: [ interval ] ifFalse: [ interval first ].
+				word := list items at: idx.
+				chip := chipMap at: word ifAbsent: [ nil ].
+				chip ifNotNil: [
+					chip background: ((Color fromHexString: '#FFEB3B') alpha: 0.3).
+					lastHighlight := chip ] ] ] ].
 	aPane addChild: list
 ]
 
@@ -88,14 +112,6 @@ ChineseClipboard >> dict [
 { #category : 'accessing' }
 ChineseClipboard >> dict: aCeDict [
 	dict := aCeDict
-]
-
-{ #category : 'gt-search' }
-ChineseClipboard >> gtSearchDictFor: aSearch [
-	<gtSearch>
-	dict ifNil: [ ^ aSearch empty ].
-	^ (dict gtSearchEntriesFor: aSearch)
-		send: [ :e | dict word: e traditional ]
 ]
 
 { #category : 'gt-actions' }
@@ -117,12 +133,21 @@ ChineseClipboard >> gtReaderFor: aView [
 		priority: 0;
 		updateWhen: ValueChanged in: [ self announcer ];
 		stencil: [
-			| pane cjkFont |
+			| pane cjkFont chipMap |
 			cjkFont := CeDictEntry cjkFontName.
+			chipMap := IdentityDictionary new.
 			pane := BrVerticalPane new matchParent.
-			self buildWordChipsIn: pane font: cjkFont charSize: 30 bopoSize: 10.
-			self buildWordListIn: pane font: cjkFont.
+			self buildWordChipsIn: pane font: cjkFont charSize: 30 bopoSize: 10 chipMap: chipMap.
+			self buildWordListIn: pane font: cjkFont chipMap: chipMap.
 			pane ]
+]
+
+{ #category : 'gt-search' }
+ChineseClipboard >> gtSearchDictFor: aSearch [
+	<gtSearch>
+	dict ifNil: [ ^ aSearch empty ].
+	^ (dict gtSearchEntriesFor: aSearch)
+		send: [ :e | dict word: e traditional ]
 ]
 
 { #category : 'gt-views' }
