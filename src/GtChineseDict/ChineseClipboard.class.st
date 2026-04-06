@@ -29,8 +29,9 @@ ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bop
 ]
 
 { #category : 'private' }
-ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: chipMap [
-	| flow |
+ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: chipMap list: listRef [
+	| flow highlightColor |
+	highlightColor := (Color fromHexString: '#FFEB3B') alpha: 0.3.
 	flow := BrHorizontalFlow new
 		hMatchParent; vFitContent;
 		padding: (BlInsets all: 8).
@@ -40,9 +41,21 @@ ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bop
 			fitContent; alignCenter;
 			padding: (BlInsets all: 3);
 			margin: (BlInsets all: 1);
+			when: BlDoubleClickEvent do: [ :evt |
+				evt consumed: true.
+				evt currentTarget phlow spawnObject: word ];
 			when: BlClickEvent do: [ :evt |
 				evt consumed: true.
-				evt currentTarget phlow spawnObject: word ].
+				chipMap ifNotNil: [
+					chipMap valuesDo: [ :c | c background: Color transparent ].
+					chip background: highlightColor ].
+				(listRef notNil and: [ listRef first notNil ]) ifTrue: [
+					| list idx |
+					list := listRef first.
+					idx := list items indexOf: word.
+					idx > 0 ifTrue: [
+						list deselectAll.
+						list selectOne: idx ] ] ].
 		word isKnown ifTrue: [
 			chip addAptitude: word tooltipAptitude ].
 		chip addChild: (BrLabel new
@@ -58,16 +71,33 @@ ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bop
 ]
 
 { #category : 'private' }
+ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: chipMap [
+	self buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: chipMap list: nil
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize [
+	self buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: nil list: nil
+]
+
+{ #category : 'private' }
 ChineseClipboard >> buildWordListIn: aPane font: cjkFont [
-	self buildWordListIn: aPane font: cjkFont chipMap: nil
+	self buildWordListIn: aPane font: cjkFont chipMap: nil listRef: nil
 ]
 
 { #category : 'private' }
 ChineseClipboard >> buildWordListIn: aPane font: cjkFont chipMap: chipMap [
-	| list knownWords lastHighlight |
+	self buildWordListIn: aPane font: cjkFont chipMap: chipMap listRef: nil
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildWordListIn: aPane font: cjkFont chipMap: chipMap listRef: listRef [
+	| list knownWords highlightColor |
 	knownWords := words select: #isKnown.
-	lastHighlight := nil.
+	highlightColor := (Color fromHexString: '#FFEB3B') alpha: 0.3.
 	list := BrColumnedList new matchParent.
+	list rowStencil: BrGlamorousColumnedListSelectableRowElementStencilBuilder new.
+	listRef ifNotNil: [ listRef at: 1 put: list ].
 	(list column title: 'Word'; width: 120)
 		stencil: [ :w :col |
 			BrLabel new aptitude: BrGlamorousLabelAptitude new;
@@ -86,15 +116,13 @@ ChineseClipboard >> buildWordListIn: aPane font: cjkFont chipMap: chipMap [
 			list phlow spawnObject: (list items at: each) ] ].
 	chipMap ifNotNil: [
 		list when: BrSelectionChanged do: [ :evt |
-			lastHighlight ifNotNil: [ lastHighlight background: Color transparent ].
+			chipMap valuesDo: [ :c | c background: Color transparent ].
 			evt selectedDo: [ :interval |
 				| word chip idx |
 				idx := interval isInteger ifTrue: [ interval ] ifFalse: [ interval first ].
 				word := list items at: idx.
 				chip := chipMap at: word ifAbsent: [ nil ].
-				chip ifNotNil: [
-					chip background: ((Color fromHexString: '#FFEB3B') alpha: 0.3).
-					lastHighlight := chip ] ] ] ].
+				chip ifNotNil: [ chip background: highlightColor ] ] ] ].
 	aPane addChild: list
 ]
 
@@ -133,12 +161,13 @@ ChineseClipboard >> gtReaderFor: aView [
 		priority: 0;
 		updateWhen: ValueChanged in: [ self announcer ];
 		stencil: [
-			| pane cjkFont chipMap |
+			| pane cjkFont chipMap listRef |
 			cjkFont := CeDictEntry cjkFontName.
 			chipMap := IdentityDictionary new.
+			listRef := Array new: 1.
 			pane := BrVerticalPane new matchParent.
-			self buildWordChipsIn: pane font: cjkFont charSize: 30 bopoSize: 10 chipMap: chipMap.
-			self buildWordListIn: pane font: cjkFont chipMap: chipMap.
+			self buildWordChipsIn: pane font: cjkFont charSize: 30 bopoSize: 10 chipMap: chipMap list: listRef.
+			self buildWordListIn: pane font: cjkFont chipMap: chipMap listRef: listRef.
 			pane ]
 ]
 

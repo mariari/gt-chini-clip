@@ -7,7 +7,7 @@ words and shows each word with BoPoMoFo and English definitions.
 
 [[file:doc/screenshot.png]]
 
-[[file:doc/reader.png]]
+[[file:doc/reader.gif]]
 
 * Features
 
