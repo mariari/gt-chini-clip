@@ -23,6 +23,59 @@ ChineseClipboard >> announcer [
 	^ announcer ifNil: [ announcer := Announcer new ]
 ]
 
+{ #category : 'private' }
+ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize [
+	| flow |
+	flow := BrHorizontalFlow new
+		hMatchParent; vFitContent;
+		padding: (BlInsets all: 8).
+	words do: [ :word |
+		| chip |
+		chip := BrVerticalPane new
+			fitContent; alignCenter;
+			padding: (BlInsets all: 3);
+			margin: (BlInsets all: 1);
+			when: BlClickEvent do: [ :evt |
+				evt consumed: true.
+				evt currentTarget phlow spawnObject: word ].
+		word isKnown ifTrue: [
+			chip addAptitude: ((BrGlamorousWithTooltipAptitude content: [
+				BrLabel new aptitude: (BrGlamorousLabelAptitude new fontSize: 16);
+					text: word definition ]) showDelay: 200 milliSeconds) ].
+		chip addChild: (BrLabel new
+			aptitude: (BrGlamorousLabelAptitude new fontSize: charSize);
+			text: (word toneColoredText fontName: cjkFont)).
+		word isKnown ifTrue: [
+			chip addChild: (BrLabel new
+				aptitude: (BrGlamorousLabelAptitude new fontSize: bopoSize);
+				text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
+		flow addChild: chip ].
+	aPane addChild: flow
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildWordListIn: aPane font: cjkFont [
+	| list |
+	list := BrColumnedList new matchParent.
+	(list column title: 'Word'; width: 120)
+		stencil: [ :w :col |
+			BrLabel new aptitude: BrGlamorousLabelAptitude new;
+				text: ((w toneColoredText fontName: cjkFont) fontSize: 18) ].
+	(list column title: 'BoPoMoFo'; width: 120)
+		stencil: [ :w :col |
+			BrLabel new aptitude: BrGlamorousLabelAptitude new;
+				text: ((w bopomofo asRopedText fontName: cjkFont) fontSize: 12) ].
+	(list column title: 'Definition')
+		stencil: [ :w :col |
+			BrLabel new aptitude: BrGlamorousLabelAptitude new;
+				text: w definition ].
+	list items: (words select: #isKnown).
+	list when: BrSelectionDoubleClicked do: [ :evt |
+		evt selection do: [ :idx |
+			list phlow spawnObject: (list items at: idx) ] ].
+	aPane addChild: list
+]
+
 { #category : 'testing' }
 ChineseClipboard >> containsChinese: aString [
 	"I return true if the string contains CJK characters."
@@ -50,6 +103,23 @@ ChineseClipboard >> gtActionPollingFor: anAction [
 ]
 
 { #category : 'gt-views' }
+ChineseClipboard >> gtReaderFor: aView [
+	<gtView>
+	words ifNil: [ ^ aView empty ].
+	^ aView explicit
+		title: 'Reader';
+		priority: 0;
+		updateWhen: ValueChanged in: [ self announcer ];
+		stencil: [
+			| pane cjkFont |
+			cjkFont := CeDictEntry cjkFontName.
+			pane := BrVerticalPane new matchParent.
+			self buildWordChipsIn: pane font: cjkFont charSize: 30 bopoSize: 10.
+			self buildWordListIn: pane font: cjkFont.
+			pane ]
+]
+
+{ #category : 'gt-views' }
 ChineseClipboard >> gtSegmentedFor: aView [
 	<gtView>
 	| cjkFont |
@@ -59,39 +129,40 @@ ChineseClipboard >> gtSegmentedFor: aView [
 		title: 'Words';
 		priority: 1;
 		updateWhen: ValueChanged in: [ self announcer ];
-		stencil: [ | flow |
+		stencil: [
+			| flow |
 			flow := BrHorizontalFlow new
-					matchParent;
-					padding: (BlInsets all: 8).
-			words
-				do: [ :word | 
-					| chip |
-					chip := BrVerticalPane new
-							fitContent;
-							padding: (BlInsets all: 4);
-							margin: (BlInsets all: 2);
-							border: (BlBorder
-									paint: (word isKnown
-											ifTrue: [ Color fromHexString: '#4CAF50' ]
-											ifFalse: [ Color fromHexString: '#FF5722' ])
-									width: 1);
-							background: (word isKnown
-									ifTrue: [ Color fromHexString: '#E8F5E9' ]
-									ifFalse: [ Color fromHexString: '#FBE9E7' ]);
-							when: BlClickEvent
-								do: [ :evt | 
-									evt consumed: true.
-									evt currentTarget phlow spawnObject: word ].
-					chip
-						addChild: (BrLabel new
-								aptitude: (BrGlamorousLabelAptitude new fontSize: 50);
-								text: (word toneColoredText fontName: cjkFont)).
-					word isKnown
-						ifTrue: [ chip
-								addChild: (BrLabel new
-										aptitude: (BrGlamorousLabelAptitude new fontSize: 20);
-										text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
-					flow addChild: chip ].
+				matchParent;
+				padding: (BlInsets all: 8).
+			words do: [ :word |
+				| chip |
+				chip := BrVerticalPane new
+					fitContent;
+					padding: (BlInsets all: 4);
+					margin: (BlInsets all: 2);
+					border: (BlBorder
+						paint: (word isKnown
+							ifTrue: [ Color fromHexString: '#4CAF50' ]
+							ifFalse: [ Color fromHexString: '#FF5722' ])
+						width: 1);
+					background: (word isKnown
+						ifTrue: [ Color fromHexString: '#E8F5E9' ]
+						ifFalse: [ Color fromHexString: '#FBE9E7' ]);
+					when: BlClickEvent do: [ :evt |
+						evt consumed: true.
+						evt currentTarget phlow spawnObject: word ].
+				word isKnown ifTrue: [
+					chip addAptitude: (BrGlamorousWithTooltipAptitude content: [
+						BrLabel new aptitude: BrGlamorousLabelAptitude new;
+							text: word definition ]) ].
+				chip addChild: (BrLabel new
+					aptitude: (BrGlamorousLabelAptitude new fontSize: 50);
+					text: (word toneColoredText fontName: cjkFont)).
+				word isKnown ifTrue: [
+					chip addChild: (BrLabel new
+						aptitude: (BrGlamorousLabelAptitude new fontSize: 20);
+						text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
+				flow addChild: chip ].
 			flow ]
 ]
 

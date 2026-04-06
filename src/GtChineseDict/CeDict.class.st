@@ -14,28 +14,16 @@ Class {
 }
 
 { #category : 'accessing' }
-CeDict class >> default [
-	^ Default ifNil: [ Default := self loadFromDefaultPath ]
-]
-
-{ #category : 'instance creation' }
-CeDict class >> loadFrom: aFileReference [
-	| dict |
-	dict := self new.
-	aFileReference readStreamDo: [ :stream |
-		[ stream atEnd ] whileFalse: [ | line |
-			line := stream nextLine.
-			(line isNotEmpty and: [ line first ~= $# ])
-				ifTrue: [ dict addEntry: (CeDictEntry fromLine: line) ] ] ].
-	^ dict
-]
-
-{ #category : 'accessing' }
 CeDict class >> dataDirectory [
 	"I return the data directory relative to the repo."
 	^ (IceRepository registeredRepositoryIncludingPackage: self package)
 		ifNotNil: [ :repo | repo location / 'data' ]
 		ifNil: [ 'data' asFileReference ]
+]
+
+{ #category : 'accessing' }
+CeDict class >> default [
+	^ Default ifNil: [ Default := self loadFromDefaultPath ]
 ]
 
 { #category : 'instance creation' }
@@ -52,6 +40,18 @@ CeDict class >> downloadDictionary [
 	GZipReadStream unzip: (dir / 'cedict.txt.gz') to: file.
 	(dir / 'cedict.txt.gz') delete.
 	^ file
+]
+
+{ #category : 'instance creation' }
+CeDict class >> loadFrom: aFileReference [
+	| dict |
+	dict := self new.
+	aFileReference readStreamDo: [ :stream |
+		[ stream atEnd ] whileFalse: [ | line |
+			line := stream nextLine.
+			(line isNotEmpty and: [ line first ~= $# ])
+				ifTrue: [ dict addEntry: (CeDictEntry fromLine: line) ] ] ].
+	^ dict
 ]
 
 { #category : 'accessing' }
@@ -111,6 +111,20 @@ CeDict >> initialize [
 	traditionalIndex := Dictionary new
 ]
 
+{ #category : 'segmentation' }
+CeDict >> longestMatchAt: pos in: aString [
+	"I return the longest matching ChineseWord starting at pos, or a single unknown character."
+	self maxWordLength to: 1 by: -1 do: [ :len |
+		| end candidate matches |
+		end := pos + len - 1.
+		end > aString size ifFalse: [
+			candidate := aString copyFrom: pos to: end.
+			matches := self lookup: candidate.
+			matches ifNotEmpty: [
+				^ ChineseWord text: candidate entries: matches ] ] ].
+	^ ChineseWord text: (aString at: pos) asString entries: #()
+]
+
 { #category : 'accessing' }
 CeDict >> lookup: aString [
 	"I return all entries matching a traditional Chinese string."
@@ -142,20 +156,6 @@ CeDict >> segment: aString [
 		result add: word.
 		pos := pos + word text size ].
 	^ result
-]
-
-{ #category : 'segmentation' }
-CeDict >> longestMatchAt: pos in: aString [
-	"I return the longest matching ChineseWord starting at pos, or a single unknown character."
-	self maxWordLength to: 1 by: -1 do: [ :len |
-		| end candidate matches |
-		end := pos + len - 1.
-		end > aString size ifFalse: [
-			candidate := aString copyFrom: pos to: end.
-			matches := self lookup: candidate.
-			matches ifNotEmpty: [
-				^ ChineseWord text: candidate entries: matches ] ] ].
-	^ ChineseWord text: (aString at: pos) asString entries: #()
 ]
 
 { #category : 'accessing' }

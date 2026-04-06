@@ -7,6 +7,8 @@ words and shows each word with BoPoMoFo and English definitions.
 
 [[file:doc/screenshot.png]]
 
+[[file:doc/reader.png]]
+
 * Features
 
 - *Dictionary*: Loads [[https://cc-cedict.org][CC-CEDICT]] (~120k entries) into the image, indexed by traditional Chinese
