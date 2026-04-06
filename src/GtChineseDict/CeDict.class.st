@@ -100,7 +100,8 @@ CeDict >> gtSearchEntriesFor: aSearch [
 		wantsToDisplayOnEmptyQuery: false;
 		items: [ entries ];
 		itemName: [ :e | e traditional, ' [', e bopomofo, '] ', e definitions first ];
-		previewObject: [ :e | e ];
+		previewObject: [ :e | self word: e traditional ];
+		send: [ :e | self word: e traditional ];
 		itemsLimit: 30;
 		filterBySubstring
 ]

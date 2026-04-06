@@ -90,6 +90,14 @@ ChineseClipboard >> dict: aCeDict [
 	dict := aCeDict
 ]
 
+{ #category : 'gt-search' }
+ChineseClipboard >> gtSearchDictFor: aSearch [
+	<gtSearch>
+	dict ifNil: [ ^ aSearch empty ].
+	^ (dict gtSearchEntriesFor: aSearch)
+		send: [ :e | dict word: e traditional ]
+]
+
 { #category : 'gt-actions' }
 ChineseClipboard >> gtActionPollingFor: anAction [
 	<gtAction>
