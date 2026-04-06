@@ -132,6 +132,12 @@ CeDict >> lookup: aString [
 ]
 
 { #category : 'accessing' }
+CeDict >> word: aString [
+	"I return a ChineseWord for a string."
+	^ ChineseWord text: aString entries: (self lookup: aString)
+]
+
+{ #category : 'accessing' }
 CeDict >> maxWordLength [
 	^ 6
 ]
