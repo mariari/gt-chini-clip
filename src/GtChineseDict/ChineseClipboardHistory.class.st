@@ -5,9 +5,8 @@ Class {
 		'clipboard',
 		'entries'
 	],
-	#category : 'GtChineseDict-Tool',
-	#package : 'GtChineseDict',
-	#tag : 'Tool'
+	#category : 'GtChineseDict',
+	#package : 'GtChineseDict'
 }
 
 { #category : 'instance creation' }
@@ -37,6 +36,16 @@ ChineseClipboardHistory >> clipboard: aClipboard [
 { #category : 'accessing' }
 ChineseClipboardHistory >> entries [
 	^ entries
+]
+
+{ #category : 'gt-actions' }
+ChineseClipboardHistory >> gtActionPollingFor: anAction [
+	<gtAction>
+	^ anAction toggle
+		icon: BrGlamorousVectorIcons play;
+		label: 'Watch clipboard';
+		activatedAction: [ :aToggle | self startPolling ];
+		deactivatedAction: [ :aToggle | self stopPolling ]
 ]
 
 { #category : 'gt-views' }
@@ -72,16 +81,6 @@ ChineseClipboardHistory >> gtHistoryFor: aView [
 			tool ]
 ]
 
-{ #category : 'gt-actions' }
-ChineseClipboardHistory >> gtActionPollingFor: anAction [
-	<gtAction>
-	^ anAction toggle
-		icon: BrGlamorousVectorIcons play;
-		label: 'Watch clipboard';
-		activatedAction: [ :aToggle | clipboard startPolling ];
-		deactivatedAction: [ :aToggle | clipboard stopPolling ]
-]
-
 { #category : 'gt-search' }
 ChineseClipboardHistory >> gtSearchDictFor: aSearch [
 	<gtSearch>
@@ -109,4 +108,14 @@ ChineseClipboardHistory >> printOn: aStream [
 		nextPutAll: 'ClipboardHistory(';
 		print: entries size;
 		nextPutAll: ' entries)'
+]
+
+{ #category : 'gt-actions' }
+ChineseClipboardHistory >> startPolling [
+	clipboard startPolling
+]
+
+{ #category : 'gt-actions' }
+ChineseClipboardHistory >> stopPolling [
+	clipboard stopPolling
 ]

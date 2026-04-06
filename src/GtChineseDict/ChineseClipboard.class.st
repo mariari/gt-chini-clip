@@ -24,74 +24,60 @@ ChineseClipboard >> announcer [
 ]
 
 { #category : 'private' }
-ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize [
-	self buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: nil
-]
-
-{ #category : 'private' }
-ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: chipMap list: listRef [
+ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: chipMap list: listRef detailPane: detailPane [
 	| flow highlightColor |
 	highlightColor := (Color fromHexString: '#FFEB3B') alpha: 0.3.
 	flow := BrHorizontalFlow new
-		hMatchParent; vFitContent;
-		padding: (BlInsets all: 8).
-	words do: [ :word |
-		| chip |
-		chip := BrVerticalPane new
-			fitContent; alignCenter;
-			padding: (BlInsets all: 3);
-			margin: (BlInsets all: 1);
-			when: BlDoubleClickEvent do: [ :evt |
-				evt consumed: true.
-				evt currentTarget phlow spawnObject: word ];
-			when: BlClickEvent do: [ :evt |
-				evt consumed: true.
-				chipMap ifNotNil: [
-					chipMap valuesDo: [ :c | c background: Color transparent ].
-					chip background: highlightColor ].
-				(listRef notNil and: [ listRef first notNil ]) ifTrue: [
-					| list idx |
-					list := listRef first.
-					idx := list items indexOf: word.
-					idx > 0 ifTrue: [
-						list deselectAll.
-						list selectOne: idx ] ] ].
-		word isKnown ifTrue: [
-			chip addAptitude: word tooltipAptitude ].
-		chip addChild: (BrLabel new
-			aptitude: (BrGlamorousLabelAptitude new fontSize: charSize);
-			text: (word toneColoredText fontName: cjkFont)).
-		word isKnown ifTrue: [
-			chip addChild: (BrLabel new
-				aptitude: (BrGlamorousLabelAptitude new fontSize: bopoSize);
-				text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
-		chipMap ifNotNil: [ chipMap at: word put: chip ].
-		flow addChild: chip ].
+			hMatchParent;
+			vFitContent;
+			padding: (BlInsets all: 8).
+	words
+		do: [ :word | 
+			| chip |
+			chip := BrVerticalPane new
+					fitContent;
+					alignCenter;
+					padding: (BlInsets all: 3);
+					margin: (BlInsets all: 1);
+					when: BlDoubleClickEvent
+						do: [ :evt | 
+							evt consumed: true.
+							evt currentTarget phlow spawnObject: word ];
+					when: BlClickEvent
+						do: [ :evt | 
+							evt consumed: true.
+							chipMap
+								ifNotNil: [ chipMap valuesDo: [ :c | c background: Color transparent ].
+									chip background: highlightColor ].
+							detailPane
+								ifNotNil: [ self
+										updateDetailPane: detailPane
+										with: word
+										font: cjkFont ].
+							(listRef notNil and: [ listRef first notNil ])
+								ifTrue: [ | list idx |
+									list := listRef first.
+									idx := list items indexOf: word.
+									idx > 0
+										ifTrue: [ list deselectAll.
+											list selectOne: idx ] ] ].
+			word isKnown ifTrue: [ chip addAptitude: word tooltipAptitude ].
+			chip
+				addChild: (BrLabel new
+						aptitude: (BrGlamorousLabelAptitude new fontSize: charSize);
+						text: (word toneColoredText fontName: cjkFont)).
+			word isKnown
+				ifTrue: [ chip
+						addChild: (BrLabel new
+								aptitude: (BrGlamorousLabelAptitude new fontSize: bopoSize);
+								text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
+			chipMap ifNotNil: [ chipMap at: word put: chip ].
+			flow addChild: chip ].
 	aPane addChild: flow
 ]
 
 { #category : 'private' }
-ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: chipMap [
-	self buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: chipMap list: nil
-]
-
-{ #category : 'private' }
-ChineseClipboard >> buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize [
-	self buildWordChipsIn: aPane font: cjkFont charSize: charSize bopoSize: bopoSize chipMap: nil list: nil
-]
-
-{ #category : 'private' }
-ChineseClipboard >> buildWordListIn: aPane font: cjkFont [
-	self buildWordListIn: aPane font: cjkFont chipMap: nil listRef: nil
-]
-
-{ #category : 'private' }
-ChineseClipboard >> buildWordListIn: aPane font: cjkFont chipMap: chipMap [
-	self buildWordListIn: aPane font: cjkFont chipMap: chipMap listRef: nil
-]
-
-{ #category : 'private' }
-ChineseClipboard >> buildWordListIn: aPane font: cjkFont chipMap: chipMap listRef: listRef [
+ChineseClipboard >> buildWordListIn: aPane font: cjkFont chipMap: chipMap listRef: listRef detailPane: detailPane [
 	| list knownWords highlightColor |
 	knownWords := words select: #isKnown.
 	highlightColor := (Color fromHexString: '#FFEB3B') alpha: 0.3.
@@ -114,15 +100,22 @@ ChineseClipboard >> buildWordListIn: aPane font: cjkFont chipMap: chipMap listRe
 	list when: BrSelectionDoubleClicked do: [ :evt |
 		evt selection do: [ :each |
 			list phlow spawnObject: (list items at: each) ] ].
-	chipMap ifNotNil: [
-		list when: BrSelectionChanged do: [ :evt |
-			chipMap valuesDo: [ :c | c background: Color transparent ].
-			evt selectedDo: [ :interval |
-				| word chip idx |
-				idx := interval isInteger ifTrue: [ interval ] ifFalse: [ interval first ].
-				word := list items at: idx.
-				chip := chipMap at: word ifAbsent: [ nil ].
-				chip ifNotNil: [ chip background: highlightColor ] ] ] ].
+	list addShortcut: (BlShortcutWithAction new
+		combination: BlKeyCombination return;
+		action: [ list selectedItemDo: [ :word |
+			list phlow spawnObject: word ] ]).
+	list when: BrSelectionChanged do: [ :evt |
+		chipMap ifNotNil: [
+			chipMap valuesDo: [ :c | c background: Color transparent ] ].
+		evt selectedDo: [ :interval |
+			| word idx |
+			idx := interval isInteger ifTrue: [ interval ] ifFalse: [ interval first ].
+			word := list items at: idx.
+			chipMap ifNotNil: [
+				(chipMap at: word ifAbsent: [ nil ]) ifNotNil: [ :chip |
+					chip background: highlightColor ] ].
+			detailPane ifNotNil: [
+				self updateDetailPane: detailPane with: word font: cjkFont ] ] ].
 	aPane addChild: list
 ]
 
@@ -161,13 +154,37 @@ ChineseClipboard >> gtReaderFor: aView [
 		priority: 0;
 		updateWhen: ValueChanged in: [ self announcer ];
 		stencil: [
-			| pane cjkFont chipMap listRef |
+			| pane cjkFont chipMap listRef detailPane |
 			cjkFont := CeDictEntry cjkFontName.
 			chipMap := IdentityDictionary new.
 			listRef := Array new: 1.
+			detailPane := BrHorizontalPane new
+					hMatchParent;
+					vFitContent;
+					padding: (BlInsets all: 8);
+					alignCenterLeft;
+					background: (Color fromHexString: '#F5F5F5');
+					border: (BlBorder paint: (Color gray alpha: 0.2) width: 1).
 			pane := BrVerticalPane new matchParent.
-			self buildWordChipsIn: pane font: cjkFont charSize: 30 bopoSize: 10 chipMap: chipMap list: listRef.
-			self buildWordListIn: pane font: cjkFont chipMap: chipMap listRef: listRef.
+			self
+				buildWordChipsIn: pane
+				font: cjkFont
+				charSize: 30
+				bopoSize: 10
+				chipMap: chipMap
+				list: listRef
+				detailPane: detailPane.
+			pane addChild: detailPane.
+			self
+				buildWordListIn: pane
+				font: cjkFont
+				chipMap: chipMap
+				listRef: listRef
+				detailPane: detailPane.
+			listRef first ifNotNil: [ :list |
+				list enqueueTask: (BlTaskAction new action: [
+					list selectFirst.
+					list requestFocus ]) ].
 			pane ]
 ]
 
@@ -189,40 +206,45 @@ ChineseClipboard >> gtSegmentedFor: aView [
 		title: 'Words';
 		priority: 1;
 		updateWhen: ValueChanged in: [ self announcer ];
-		stencil: [
-			| flow |
+		stencil: [ | flow |
 			flow := BrHorizontalFlow new
-				matchParent;
-				padding: (BlInsets all: 8).
-			words do: [ :word |
-				| chip |
-				chip := BrVerticalPane new
-					fitContent;
-					padding: (BlInsets all: 4);
-					margin: (BlInsets all: 2);
-					border: (BlBorder
-						paint: (word isKnown
-							ifTrue: [ Color fromHexString: '#4CAF50' ]
-							ifFalse: [ Color fromHexString: '#FF5722' ])
-						width: 1);
-					background: (word isKnown
-						ifTrue: [ Color fromHexString: '#E8F5E9' ]
-						ifFalse: [ Color fromHexString: '#FBE9E7' ]);
-					when: BlClickEvent do: [ :evt |
-						evt consumed: true.
-						evt currentTarget phlow spawnObject: word ].
-				word isKnown ifTrue: [
-					chip addAptitude: (BrGlamorousWithTooltipAptitude content: [
-						BrLabel new aptitude: BrGlamorousLabelAptitude new;
-							text: word definition ]) ].
-				chip addChild: (BrLabel new
-					aptitude: (BrGlamorousLabelAptitude new fontSize: 50);
-					text: (word toneColoredText fontName: cjkFont)).
-				word isKnown ifTrue: [
-					chip addChild: (BrLabel new
-						aptitude: (BrGlamorousLabelAptitude new fontSize: 20);
-						text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
-				flow addChild: chip ].
+					matchParent;
+					padding: (BlInsets all: 8).
+			words
+				do: [ :word | 
+					| chip |
+					chip := BrVerticalPane new
+							fitContent;
+							padding: (BlInsets all: 4);
+							margin: (BlInsets all: 2);
+							border: (BlBorder
+									paint: (word isKnown
+											ifTrue: [ Color fromHexString: '#4CAF50' ]
+											ifFalse: [ Color fromHexString: '#FF5722' ])
+									width: 1);
+							background: (word isKnown
+									ifTrue: [ Color fromHexString: '#E8F5E9' ]
+									ifFalse: [ Color fromHexString: '#FBE9E7' ]);
+							when: BlClickEvent
+								do: [ :evt | 
+									evt consumed: true.
+									evt currentTarget phlow spawnObject: word ].
+					word isKnown
+						ifTrue: [ chip
+								addAptitude: (BrGlamorousWithExplicitTooltipAptitude
+										content: [ BrLabel new
+												aptitude: BrGlamorousLabelAptitude new;
+												text: word definition ]) ].
+					chip
+						addChild: (BrLabel new
+								aptitude: (BrGlamorousLabelAptitude new fontSize: 50);
+								text: (word toneColoredText fontName: cjkFont)).
+					word isKnown
+						ifTrue: [ chip
+								addChild: (BrLabel new
+										aptitude: (BrGlamorousLabelAptitude new fontSize: 20);
+										text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
+					flow addChild: chip ].
 			flow ]
 ]
 
@@ -286,6 +308,23 @@ ChineseClipboard >> stopPolling [
 	pollingProcess ifNotNil: [ :p |
 		p terminate.
 		pollingProcess := nil ]
+]
+
+{ #category : 'private' }
+ChineseClipboard >> updateDetailPane: detailPane with: word font: cjkFont [
+	detailPane removeChildren.
+	detailPane addChild: (BrLabel new
+		aptitude: (BrGlamorousLabelAptitude new fontSize: 36);
+		text: (word toneColoredText fontName: cjkFont)).
+	word isKnown ifTrue: [
+		detailPane addChild: (BrLabel new
+			aptitude: (BrGlamorousLabelAptitude new fontSize: 16);
+			text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray);
+			margin: (BlInsets left: 12)).
+		detailPane addChild: (BrLabel new
+			aptitude: (BrGlamorousLabelAptitude new fontSize: 16);
+			text: word definition;
+			margin: (BlInsets left: 12)) ]
 ]
 
 { #category : 'accessing' }
