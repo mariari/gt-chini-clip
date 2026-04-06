@@ -34,16 +34,14 @@ The dictionary downloads automatically on first use (~4 MB from MDBG).
 * Usage
 
 #+begin_src smalltalk
-"Load dictionary (auto-downloads CC-CEDICT on first run)"
-tool := ChineseClipboard open.
-tool processText: '今天天氣很好'.
-tool inspect.
-
-"Start clipboard watching (auto-updates on new Chinese text)"
-tool startPolling.
+"Open with clipboard watching and history"
+ChineseClipboardHistory open startPolling.
 #+end_src
 
-Click any word chip to inspect its dictionary entries. Use Ctrl+P on a CeDict to search entries.
+Copy Chinese text from anywhere — it auto-segments, shows tone-colored
+characters with BoPoMoFo, and keeps a history of all lookups. Click any
+word chip for definitions, arrow through the list to highlight words in
+the reading view, or use Ctrl+P to search the dictionary.
 
 * Classes
 
