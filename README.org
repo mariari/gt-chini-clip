@@ -41,7 +41,7 @@ ChineseClipboardHistory open startPolling.
 Copy Chinese text from anywhere — it auto-segments, shows tone-colored
 characters with BoPoMoFo, and keeps a history of all lookups. Click any
 word chip for definitions, arrow through the list to highlight words in
-the reading view, or use Ctrl+P to search the dictionary.
+the reading view.
 
 * Classes
 
@@ -51,6 +51,7 @@ the reading view, or use Ctrl+P to search the dictionary.
 | CeDictEntry         | One dictionary entry: traditional, simplified, pinyin, bopomofo, definitions |
 | ChineseWord         | A segmented word with its matching dictionary entries                        |
 | ChineseClipboard    | Clipboard tool: polls, segments, GT views with tone colors                   |
+| ChineseClipboardHistory | Entry point: wraps clipboard with history of all lookups                 |
 | PinyinBopomofo      | Pinyin to BoPoMoFo conversion table                                          |
 | ChineseToneColor    | Tone number to color mapping                                                 |
 | ChineseDictExamples | GT examples covering all classes                                             |

@@ -53,24 +53,37 @@ ChineseDictExamples >> cjkFontName [
 ]
 
 { #category : 'examples - clipboard' }
-ChineseDictExamples >> clipboardContainsChinese [
+ChineseDictExamples >> clipboardProcessText [
 	<gtExample>
 	| tool |
 	tool := ChineseClipboard new dict: self smallDict.
 	self assert: (tool containsChinese: '你好world').
 	self assert: (tool containsChinese: 'hello world') not.
-	^ tool
-]
-
-{ #category : 'examples - clipboard' }
-ChineseDictExamples >> clipboardProcessText [
-	<gtExample>
-	| tool |
-	tool := ChineseClipboard new dict: self smallDict.
 	tool processText: '今天你好'.
 	self assert: tool words size equals: 2.
 	self assert: tool words first text equals: '今天'.
 	^ tool
+]
+
+{ #category : 'examples - history' }
+ChineseDictExamples >> historyOpen [
+	<gtExample>
+	| history |
+	history := ChineseClipboardHistory on: (ChineseClipboard new dict: self smallDict).
+	self assert: history entries isEmpty.
+	self assert: history clipboard notNil.
+	^ history
+]
+
+{ #category : 'examples - history' }
+ChineseDictExamples >> historyWithEntries [
+	<gtExample>
+	| history |
+	history := self historyOpen.
+	history clipboard processText: '今天你好'.
+	history clipboard processText: '天氣很好'.
+	self assert: history entries size equals: 2.
+	^ history
 ]
 
 { #category : 'examples - entry' }
