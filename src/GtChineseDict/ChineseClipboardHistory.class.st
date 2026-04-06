@@ -27,6 +27,7 @@ ChineseClipboardHistory >> clipboard [
 { #category : 'accessing' }
 ChineseClipboardHistory >> clipboard: aClipboard [
 	clipboard := aClipboard.
+	clipboard words ifNotNil: [ self onClipboardChanged ].
 	clipboard announcer
 		when: ValueChanged
 		send: #onClipboardChanged
