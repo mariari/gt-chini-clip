@@ -137,23 +137,16 @@ ChineseDictExamples >> clipboardProcessText [
 ]
 
 { #category : 'examples - history' }
-ChineseDictExamples >> historyOpen [
-	<gtExample>
-	| history |
-	history := ChineseClipboardHistory on: (ChineseClipboard new dict: self smallDict).
-	self assert: history entries isEmpty.
-	^ history
-]
-
-{ #category : 'examples - history' }
 ChineseDictExamples >> historyWithEntries [
 	<gtExample>
-	| history |
-	history := self historyOpen.
-	history clipboard processText: '今天你好'.
-	history clipboard processText: '天氣很好'.
+	"I compose on clipboardProcessText's clipboard, process two new texts."
+	| tool history |
+	tool := self clipboardProcessText.
+	history := ChineseClipboardHistory on: tool.
+	tool processText: '你好世界'.
+	tool processText: '天氣很好'.
 	self assert: history entries size equals: 2.
-	self assert: history entries first key equals: '今天你好'.
+	self assert: history entries first key equals: '你好世界'.
 	^ history
 ]
 
