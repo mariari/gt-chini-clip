@@ -55,10 +55,11 @@ MoedictDict class >> loadFrom: aFileReference [
 
 { #category : 'instance creation' }
 MoedictDict class >> loadFromDefaultPath [
-	"I load from the data directory, downloading if needed."
+	"I load from the data directory, downloading if needed.
+	Use #isFile (not #exists) so a stray directory at this path doesn't masquerade as the dictionary."
 	| file |
 	file := self dictionaryFile.
-	file exists ifFalse: [ self downloadDictionary ].
+	file isFile ifFalse: [ self downloadDictionary ].
 	^ self loadFrom: file
 ]
 

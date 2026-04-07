@@ -29,17 +29,25 @@ CeDict class >> default [
 
 { #category : 'instance creation' }
 CeDict class >> downloadDictionary [
-	"I download CC-CEDICT to the data directory if not already present."
-	| dir file |
+	"I download CC-CEDICT to the data directory if not already present.
+	Note: avoid GZipReadStream class>>#unzip:to:, whose `to:` argument is treated as a directory (it calls #ensureCreateDirectory and writes a child file inside it). Unzip explicitly to the desired file path instead."
+	| dir file gzFile |
 	dir := self dataDirectory.
 	dir ensureCreateDirectory.
 	file := dir / 'cedict.txt'.
-	file exists ifTrue: [ ^ file ].
+	file isFile ifTrue: [ ^ file ].
+	gzFile := dir / 'cedict.txt.gz'.
 	ZnClient new
 		url: 'https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt.gz';
-		downloadTo: dir / 'cedict.txt.gz'.
-	GZipReadStream unzip: (dir / 'cedict.txt.gz') to: file.
-	(dir / 'cedict.txt.gz') delete.
+		downloadTo: gzFile.
+	gzFile binaryReadStreamDo: [ :rawStream |
+		file binaryWriteStreamDo: [ :out |
+			| unzipper buffer |
+			unzipper := GZipReadStream on: rawStream.
+			buffer := ByteArray new: 50000.
+			[ unzipper atEnd ] whileFalse: [
+				out nextPutAll: (unzipper nextInto: buffer) ] ] ].
+	gzFile delete.
 	^ file
 ]
 
@@ -57,10 +65,11 @@ CeDict class >> loadFrom: aFileReference [
 
 { #category : 'accessing' }
 CeDict class >> loadFromDefaultPath [
-	"I load from the data directory, downloading if needed."
+	"I load from the data directory, downloading if needed.
+	Use #isFile (not #exists) so a stray directory at this path doesn't masquerade as the dictionary."
 	| file |
 	file := self dataDirectory / 'cedict.txt'.
-	file exists ifFalse: [ self downloadDictionary ].
+	file isFile ifFalse: [ self downloadDictionary ].
 	^ self loadFrom: file
 ]
 
