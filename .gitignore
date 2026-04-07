@@ -1,1 +1,4 @@
-data/
+data/*
+!data/custom/
+data/custom/*
+!data/custom/*.txt

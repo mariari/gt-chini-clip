@@ -43,11 +43,68 @@ characters with BoPoMoFo, and keeps a history of all lookups. Click any
 word chip for definitions, arrow through the list to highlight words in
 the reading view.
 
+* Custom dictionaries
+
+CC-CEDICT covers everyday vocabulary but not proper nouns specific to a
+game, novel, song, technical field, or anything else with its own
+jargon. =CustomDict= is a layered dictionary on top of CC-CEDICT: lookup
+checks your own entries first, falls back to the base, so segmentation
+prefers your custom definitions.
+
+#+begin_src smalltalk
+"Open a clipboard backed by a custom dictionary, polling started"
+ChineseClipboardHistory openWith: '同級生'.
+#+end_src
+
+This loads (or creates) =data/custom/同級生.txt=, layers it on the
+default CC-CEDICT, and starts watching the clipboard. Any text you copy
+gets segmented through the merged dictionary.
+
+** Adding entries
+
+Add a new entry while you're reading. Auto-saves to disk:
+
+#+begin_src smalltalk
+"Inside any clipboard / history object — clipboard dict is the CustomDict"
+clipboard dict addLine:
+    '先負學園 先负学园 [xian1 fu4 xue2 yuan2] /Sennegakuen Academy/'.
+#+end_src
+
+The line format is standard CC-CEDICT, so you can copy lines from
+online sources directly:
+
+#+begin_example
+Traditional Simplified [pin1 yin1 with2 tones3] /def1/def2/def3/
+#+end_example
+
+Tones are digits 1-5 (5 = neutral), =u:= encodes ü (e.g. =nu:3= = 女).
+
+** Lower-level handles
+
+=ChineseClipboardHistory openWith:= is the entry point you want for
+day-to-day use — it builds the clipboard, layers the custom dict, and
+starts polling. The pieces underneath are still useful when you want
+just the dictionary or want to script something:
+
+#+begin_src smalltalk
+"Just the dictionary, no clipboard"
+dict := CustomDict named: '同級生'.
+dict addLine: '主人公 主人公 [zhu3 ren2 gong1] /protagonist/'.
+
+"List all custom dicts on disk"
+CustomDict allNames.
+#+end_src
+
+Each custom dict lives in =data/custom/{name}.txt=. The files are
+checked in (under =data/custom/= only — the rest of =data/= is
+gitignored), so curated entries can be shared.
+
 * Classes
 
 | Class               | Role                                                                         |
 |---------------------+------------------------------------------------------------------------------|
 | CeDict              | Dictionary: loads CC-CEDICT, indexes by traditional, segments text           |
+| CustomDict          | CeDict subclass: own entries layered over a base dict, persisted per name    |
 | CeDictEntry         | One dictionary entry: traditional, simplified, pinyin, bopomofo, definitions |
 | ChineseWord         | A segmented word with its matching dictionary entries                        |
 | ChineseClipboard    | Clipboard tool: polls, segments, GT views with tone colors                   |

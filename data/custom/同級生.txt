@@ -1,0 +1,82 @@
+# Custom dictionary for 同級生 (Dōkyūsei) - 1992 elf visual novel
+# Names taken from the official Traditional Chinese translation
+# (released 2022) via zh.wikipedia. CC-CEDICT line format:
+#   Traditional Simplified [pinyin] /def1/def2/
+#
+# Each character has three entries: full name, surname, and given name,
+# because dialogue often uses just the surname or just the given name.
+
+# --- Locations ---
+先負學園 先负学园 [xian1 fu4 xue2 yuan2] /Sennegakuen Academy (high school setting)/
+矢吹鎮 矢吹镇 [shi3 chui1 zhen4] /Yabuki town (Cat's Eye bar district)/
+
+# --- Protagonist ---
+拓朗 拓朗 [tuo4 lang3] /Takurou (default protagonist name)/
+
+# --- Heroines (school-age) ---
+櫻木舞 樱木舞 [ying1 mu4 wu3] /Sakuragi Mai (main heroine, swimming club, year 3)/
+櫻木 樱木 [ying1 mu4] /Sakuragi (surname)/
+
+田中美沙 田中美沙 [tian2 zhong1 mei3 sha1] /Tanaka Misa (track and field captain, year 3)/
+田中 田中 [tian2 zhong1] /Tanaka (surname)/
+美沙 美沙 [mei3 sha1] /Misa (given name)/
+
+黑川里美 黑川里美 [hei1 chuan1 li3 mei3] /Kurokawa Satomi (childhood friend, cafe worker, year 3)/
+黑川 黑川 [hei1 chuan1] /Kurokawa (surname)/
+里美 里美 [li3 mei3] /Satomi (given name)/
+
+仁科久留美 仁科久留美 [ren2 ke1 jiu3 liu2 mei3] /Nishina Kurumi (year 3 classmate)/
+仁科 仁科 [ren2 ke1] /Nishina (surname)/
+久留美 久留美 [jiu3 liu2 mei3] /Kurumi (given name)/
+
+鈴木美穗 铃木美穗 [ling2 mu4 mei3 sui4] /Suzuki Miho (broadcasting club, florist, year 3)/
+鈴木 铃木 [ling2 mu4] /Suzuki (surname)/
+美穗 美穗 [mei3 sui4] /Miho (given name)/
+
+# --- Heroines (adult / non-student) ---
+芹澤芳子 芹泽芳子 [qin2 ze2 fang1 zi3] /Serizawa Yoshiko (Sennegakuen civics teacher)/
+芹澤 芹泽 [qin2 ze2] /Serizawa (surname)/
+芳子 芳子 [fang1 zi3] /Yoshiko (given name)/
+
+齋藤亞子 斋藤亚子 [zhai1 teng2 ya4 zi3] /Saitou Ako (pharmacy clerk, age 20)/
+齋藤 斋藤 [zhai1 teng2] /Saitou (surname)/
+亞子 亚子 [ya4 zi3] /Ako (given name)/
+
+齋藤真子 斋藤真子 [zhai1 teng2 zhen1 zi3] /Saitou Mako (Sennegakuen school nurse)/
+真子 真子 [zhen1 zi3] /Mako (given name)/
+
+正樹夏子 正树夏子 [zheng4 shu4 xia4 zi3] /Masaki Natsuko (design school student)/
+正樹 正树 [zheng4 shu4] /Masaki (surname)/
+夏子 夏子 [xia4 zi3] /Natsuko (given name)/
+
+田町祐美 田町祐美 [tian2 ding1 you4 mei3] /Tamachi Yumi (Fujita Manufacturing office worker)/
+田町 田町 [tian2 ding1] /Tamachi (surname)/
+祐美 祐美 [you4 mei3] /Yumi (given name)/
+
+# --- Console / OVA additions ---
+櫻木京子 樱木京子 [ying1 mu4 jing1 zi3] /Sakuragi Kyouko (Mai's younger sister)/
+京子 京子 [jing1 zi3] /Kyouko (given name)/
+
+高野綠 高野绿 [gao1 ye3 lu:4] /Takano Midori (year 3, handicrafts club)/
+高野 高野 [gao1 ye3] /Takano (surname)/
+
+堀真純 堀真纯 [ku1 zhen1 chun2] /Hori Masumi (Sennegakuen police, traffic division)/
+真純 真纯 [zhen1 chun2] /Masumi (given name)/
+
+島本恭子 岛本恭子 [dao3 ben3 gong1 zi3] /Shimamoto Kyouko (OVA original character)/
+島本 岛本 [dao3 ben3] /Shimamoto (surname)/
+恭子 恭子 [gong1 zi3] /Kyouko (given name)/
+
+# --- Male characters ---
+坂上一哉 坂上一哉 [ban3 shang4 yi1 zai1] /Sakagami Kazuya (year 3 classmate, friend)/
+坂上 坂上 [ban3 shang4] /Sakagami (surname)/
+一哉 一哉 [yi1 zai1] /Kazuya (given name)/
+
+相原健二 相原健二 [xiang1 yuan2 jian4 er4] /Aihara Kenji (wealthy heir, year 3)/
+相原 相原 [xiang1 yuan2] /Aihara (surname)/
+健二 健二 [jian4 er4] /Kenji (given name)/
+
+間太郎 间太郎 [jian1 tai4 lang2] /Hazama Tarou (studious year 3 classmate)/
+太郎 太郎 [tai4 lang2] /Tarou (given name)/
+
+冬彥 冬彦 [dong1 yan4] /Fuyuhiko (former boyfriend, otaku)/
