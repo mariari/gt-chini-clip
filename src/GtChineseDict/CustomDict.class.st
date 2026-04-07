@@ -69,15 +69,15 @@ CustomDict >> file [
 
 { #category : 'segmentation' }
 CustomDict >> firstOwnStartAfter: pos in: aString [
-	"I return the smallest p > pos at which one of my own entries starts, within a window of my longest entry. nil if no own entry starts in the window."
+	"I return the smallest p > pos at which one of my own entries starts (matching either traditional or simplified), within a window of my longest entry. nil if no own entry starts in the window."
 	| maxOwn limit |
 	maxOwn := maxLen ifNil: [ ^ nil ].
 	maxOwn = 0 ifTrue: [ ^ nil ].
 	limit := (pos + maxOwn) min: aString size.
 	(pos + 1) to: limit do: [ :p |
 		1 to: (maxOwn min: (aString size - p + 1)) do: [ :len |
-			(traditionalIndex includesKey: (aString copyFrom: p to: p + len - 1))
-				ifTrue: [ ^ p ] ] ].
+			(super lookup: (aString copyFrom: p to: p + len - 1)) isEmpty
+				ifFalse: [ ^ p ] ] ].
 	^ nil
 ]
 
@@ -131,8 +131,8 @@ CustomDict >> longestMatchAt: pos in: aString [
 
 { #category : 'accessing' }
 CustomDict >> lookup: aString [
-	"I return my own entries first, then fall back to the base dict so segmentation prefers custom definitions."
-	^ (traditionalIndex at: aString ifAbsent: [ #() ])
+	"I return my own entries first (matching either traditional or simplified), then fall back to the base dict."
+	^ (super lookup: aString)
 		, (baseDict ifNil: [ #() ] ifNotNil: [ baseDict lookup: aString ])
 ]
 
@@ -155,7 +155,7 @@ CustomDict >> name: aString [
 
 { #category : 'segmentation' }
 CustomDict >> ownLongestMatchAt: pos in: aString [
-	"I return the longest match starting at pos that comes from my own entries (not the base dict), or nil."
+	"I return the longest match starting at pos that comes from my own entries (not the base dict), or nil. Checks both traditional and simplified."
 	| maxOwn |
 	maxOwn := maxLen ifNil: [ ^ nil ].
 	maxOwn to: 1 by: -1 do: [ :len |
@@ -164,8 +164,8 @@ CustomDict >> ownLongestMatchAt: pos in: aString [
 		end <= aString size ifTrue: [
 			| candidate matches |
 			candidate := aString copyFrom: pos to: end.
-			matches := traditionalIndex at: candidate ifAbsent: [ nil ].
-			matches ifNotNil: [
+			matches := super lookup: candidate.
+			matches isEmpty ifFalse: [
 				^ ChineseWord text: candidate entries: matches dict: self ] ] ].
 	^ nil
 ]

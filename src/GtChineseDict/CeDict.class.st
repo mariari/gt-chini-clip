@@ -3,7 +3,8 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'entries',
-		'traditionalIndex'
+		'traditionalIndex',
+		'simplifiedIndex'
 	],
 	#classVars : [
 		'Default'
@@ -72,7 +73,10 @@ CeDict class >> reset [
 CeDict >> addEntry: aCeDictEntry [
 	entries add: aCeDictEntry.
 	(traditionalIndex at: aCeDictEntry traditional ifAbsentPut: [ OrderedCollection new ])
-		add: aCeDictEntry
+		add: aCeDictEntry.
+	aCeDictEntry simplified = aCeDictEntry traditional ifFalse: [
+		(simplifiedIndex at: aCeDictEntry simplified ifAbsentPut: [ OrderedCollection new ])
+			add: aCeDictEntry ]
 ]
 
 { #category : 'gt-views' }
@@ -109,7 +113,8 @@ CeDict >> gtSearchEntriesFor: aSearch [
 { #category : 'initialization' }
 CeDict >> initialize [
 	entries := OrderedCollection new.
-	traditionalIndex := Dictionary new
+	traditionalIndex := Dictionary new.
+	simplifiedIndex := Dictionary new
 ]
 
 { #category : 'segmentation' }
@@ -128,8 +133,10 @@ CeDict >> longestMatchAt: pos in: aString [
 
 { #category : 'accessing' }
 CeDict >> lookup: aString [
-	"I return all entries matching a traditional Chinese string."
-	^ traditionalIndex at: aString ifAbsent: [ #() ]
+	"I return all entries matching aString as either traditional or simplified Chinese."
+	simplifiedIndex ifNil: [ self rebuildSimplifiedIndex ].
+	^ (traditionalIndex at: aString ifAbsent: [ #() ])
+		, (simplifiedIndex at: aString ifAbsent: [ #() ])
 ]
 
 { #category : 'accessing' }
@@ -143,6 +150,16 @@ CeDict >> printOn: aStream [
 		nextPutAll: 'CeDict(';
 		print: entries size;
 		nextPutAll: ' entries)'
+]
+
+{ #category : 'initialization' }
+CeDict >> rebuildSimplifiedIndex [
+	"I (re)build the simplified-form index from existing entries. Used to migrate dictionaries loaded before the simplified index existed, and called lazily by lookup: when the index is nil."
+	simplifiedIndex := Dictionary new.
+	entries do: [ :e |
+		e simplified = e traditional ifFalse: [
+			(simplifiedIndex at: e simplified ifAbsentPut: [ OrderedCollection new ])
+				add: e ] ]
 ]
 
 { #category : 'segmentation' }
