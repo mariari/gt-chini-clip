@@ -18,6 +18,12 @@ ChineseClipboard class >> open [
 	^ self new dict: CeDict default
 ]
 
+{ #category : 'instance creation' }
+ChineseClipboard class >> openWith: aString [
+	"I open a clipboard backed by a custom dictionary named aString, layered on the default CC-CEDICT."
+	^ self new dict: (CustomDict named: aString)
+]
+
 { #category : 'accessing' }
 ChineseClipboard >> announcer [
 	^ announcer ifNil: [ announcer := Announcer new ]

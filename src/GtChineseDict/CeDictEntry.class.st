@@ -50,6 +50,19 @@ CeDictEntry >> bopomofo [
 	^ PinyinBopomofo convert: pinyin
 ]
 
+{ #category : 'printing' }
+CeDictEntry >> ceDictLine [
+	"I return my CC-CEDICT line representation: Traditional Simplified [pinyin] /def1/def2/"
+	^ String streamContents: [ :s |
+		s
+			nextPutAll: traditional; space;
+			nextPutAll: simplified;
+			nextPutAll: ' [';
+			nextPutAll: pinyin;
+			nextPutAll: '] /'.
+		definitions do: [ :d | s nextPutAll: d; nextPut: $/ ] ]
+]
+
 { #category : 'accessing' }
 CeDictEntry >> definitions [
 	^ definitions

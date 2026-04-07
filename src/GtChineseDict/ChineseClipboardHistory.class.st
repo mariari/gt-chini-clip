@@ -19,6 +19,14 @@ ChineseClipboardHistory class >> open [
 	^ self on: ChineseClipboard open
 ]
 
+{ #category : 'instance creation' }
+ChineseClipboardHistory class >> openWith: aString [
+	"I open a history wrapping a clipboard backed by a custom dictionary named aString, and start polling immediately."
+	^ (self on: (ChineseClipboard openWith: aString))
+		startPolling;
+		yourself
+]
+
 { #category : 'accessing' }
 ChineseClipboardHistory >> clipboard [
 	^ clipboard
