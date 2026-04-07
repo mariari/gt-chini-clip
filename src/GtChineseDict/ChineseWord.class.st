@@ -110,31 +110,14 @@ ChineseWord >> gtDefinitionsFor: aView [
 { #category : 'gt-views' }
 ChineseWord >> gtMoedictFor: aView [
 	<gtView>
-	| entry cjkFont |
+	| entry |
 	entry := self moedictEntry.
 	entry ifNil: [ ^ aView empty ].
-	cjkFont := CeDictEntry cjkFontName.
-	^ aView columnedList
+	^ aView forward
 		title: 'MOEDICT';
 		priority: 6;
-		items: [
-			entry heteronyms gather: [ :h |
-				(h at: 'definitions' ifAbsent: [ #() ])
-					collect: [ :d | h -> d ] ] ];
-		column: 'Pinyin'
-			text: [ :pair | (pair key at: 'pinyin' ifAbsent: [ '' ]) ]
-			width: 100;
-		column: 'POS'
-			text: [ :pair |
-				| tag |
-				tag := pair value at: 'type' ifAbsent: [ '' ].
-				tag isEmpty
-					ifTrue: [ '' asRopedText ]
-					ifFalse: [ (tag , ' (' , (MoedictEntry posNameFor: tag) , ')') asRopedText fontName: cjkFont ] ]
-			width: 140;
-		column: 'Definition'
-			text: [ :pair | (pair value at: 'def' ifAbsent: [ '' ]) asRopedText fontName: cjkFont ];
-		send: [ :pair | pair value ]
+		object: [ entry ];
+		view: #gtDefinitionsFor:
 ]
 
 { #category : 'gt-views' }
