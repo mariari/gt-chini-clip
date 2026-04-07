@@ -86,6 +86,30 @@ MoedictEntry >> gtDefinitionsFor: aView [
 		send: [ :pair | pair value ]
 ]
 
+{ #category : 'gt-views' }
+MoedictEntry >> gtOverviewFor: aView [
+	<gtView>
+	| cjkFont |
+	cjkFont := CeDictEntry cjkFontName.
+	^ aView columnedList
+		title: 'Overview';
+		priority: 0;
+		items: [ {
+			{ 'Title'. (self title asRopedText fontName: cjkFont) fontSize: 24 }.
+			{ 'Heteronyms'. self heteronyms size asString }.
+			{ 'Definitions'. self allDefinitions size asString }.
+			{ 'POS tags'.
+				self posTags isEmpty
+					ifTrue: [ '(none)' ]
+					ifFalse: [ ((', ' join: (self posTags collect: [ :t |
+						t , ' (' , (self class posNameFor: t) , ')' ])) asRopedText fontName: cjkFont) ] }.
+			{ 'Radical'. ((self data at: 'radical' ifAbsent: [ '?' ]) asRopedText fontName: cjkFont) }.
+			{ 'Strokes'. (self data at: 'stroke_count' ifAbsent: [ '?' ]) asString }
+		} ];
+		column: 'Property' text: #first;
+		column: 'Value' text: #second
+]
+
 { #category : 'accessing' }
 MoedictEntry >> heteronyms [
 	"I return the array of pronunciation variants. Each is a Dictionary with bopomofo, pinyin, definitions."

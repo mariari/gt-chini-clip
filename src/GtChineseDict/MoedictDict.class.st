@@ -73,6 +73,51 @@ MoedictDict >> addEntry: aMoedictEntry [
 	titleIndex at: aMoedictEntry title put: aMoedictEntry
 ]
 
+{ #category : 'gt-views' }
+MoedictDict >> gtEntriesFor: aView [
+	<gtView>
+	| cjkFont |
+	cjkFont := CeDictEntry cjkFontName.
+	^ aView columnedList
+		title: 'Entries';
+		priority: 5;
+		items: [ entries ];
+		column: 'Title'
+			text: [ :e | (e title asRopedText fontName: cjkFont) fontSize: 18 ]
+			width: 150;
+		column: 'Het'
+			text: [ :e | e heteronyms size ]
+			width: 50;
+		column: 'Defs'
+			text: [ :e | e allDefinitions size ]
+			width: 50;
+		column: 'POS'
+			text: [ :e | (' ' join: e posTags) asRopedText fontName: cjkFont ]
+			width: 120;
+		column: 'First definition'
+			text: [ :e |
+				e allDefinitions isEmpty
+					ifTrue: [ '' asRopedText ]
+					ifFalse: [ (e allDefinitions first at: 'def' ifAbsent: [ '' ]) asRopedText fontName: cjkFont ] ];
+		send: [ :e | e ]
+]
+
+{ #category : 'gt-search' }
+MoedictDict >> gtSearchEntriesFor: aSearch [
+	<gtSearch>
+	^ aSearch list
+		title: 'Entries';
+		priority: 10;
+		wantsToDisplayOnEmptyQuery: false;
+		items: [ entries ];
+		itemName: [ :e |
+			e title , ' (' , e heteronyms size asString , ' het, ' ,
+			e allDefinitions size asString , ' defs)' ];
+		send: [ :e | e ];
+		itemsLimit: 30;
+		filterBySubstring
+]
+
 { #category : 'initialization' }
 MoedictDict >> initialize [
 	entries := OrderedCollection new.
