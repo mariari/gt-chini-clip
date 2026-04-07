@@ -82,6 +82,10 @@ ChineseWord >> gtBreakdownFor: aView [
 		column: 'BoPoMoFo' text: [ :w |
 			w bopomofo asRopedText fontName: cjkFont ] width: 100;
 		column: 'Definition' text: [ :w | w definition ];
+		column: 'Other readings' text: [ :w |
+			w entries size > 1
+				ifTrue: [ (w entries size - 1) asString, ' more' ]
+				ifFalse: [ '' ] ] width: 90;
 		send: [ :w | w ]
 ]
 

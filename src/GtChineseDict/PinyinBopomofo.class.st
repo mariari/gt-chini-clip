@@ -148,9 +148,9 @@ PinyinBopomofo class >> convert: pinyinString [
 
 { #category : 'conversion' }
 PinyinBopomofo class >> convertSyllable: aString [
-	"I convert a single pinyin syllable like 'hao3' to BoPoMoFo."
+	"I convert a single pinyin syllable like 'hao3' to BoPoMoFo. CC-CEDICT writes ü as 'u:' (e.g. 'nu:3'); I normalise that to 'v' so the existing nv/lv table entries match."
 	| lower tone base bpmf |
-	lower := aString asLowercase.
+	lower := aString asLowercase copyReplaceAll: 'u:' with: 'v'.
 	tone := lower last isDigit
 		ifTrue: [ lower last digitValue ]
 		ifFalse: [ 5 ].

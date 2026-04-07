@@ -24,24 +24,129 @@ ChineseClipboard >> announcer [
 ]
 
 { #category : 'private' }
+ChineseClipboard >> buildChipFor: word charSize: charSize bopoSize: bopoSize select: selectWord chipsByWord: chipsByWord font: cjkFont [
+	"I build a chip for one word, with optional expand-to-breakdown affordance."
+	| chip mainBlock breakdownContainer expandable |
+	chip := BrVerticalPane new
+		fitContent; alignCenter;
+		padding: (BlInsets all: 3);
+		margin: (BlInsets all: 1).
+	mainBlock := BrVerticalPane new
+		fitContent; alignCenter;
+		when: BlDoubleClickEvent do: [ :evt |
+			evt consumed: true.
+			evt currentTarget phlow spawnObject: word ];
+		when: BlClickEvent do: [ :evt |
+			evt consumed: true.
+			selectWord value: word ].
+	mainBlock addChild: (BrLabel new
+		aptitude: (BrGlamorousLabelAptitude new fontSize: charSize);
+		text: (word toneColoredText fontName: cjkFont)).
+	word isKnown ifTrue: [
+		mainBlock
+			addAptitude: word tooltipAptitude;
+			addChild: (BrLabel new
+				aptitude: (BrGlamorousLabelAptitude new fontSize: bopoSize);
+				text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
+	chipsByWord at: word put: mainBlock.
+	chip addChild: mainBlock.
+	expandable := word isKnown and: [ word text size > 1 ].
+	expandable ifTrue: [
+		breakdownContainer := BrHorizontalFlow new
+			fitContent; padding: (BlInsets top: 2);
+			visibility: BlVisibility gone.
+		word breakdown do: [ :sub |
+			breakdownContainer addChild: (self
+				buildChipFor: sub
+				charSize: charSize - 8
+				bopoSize: bopoSize - 2
+				select: selectWord
+				chipsByWord: chipsByWord
+				font: cjkFont) ].
+		chip addChild: (BrButton new
+			aptitude: BrGlamorousButtonWithIconAptitude;
+			icon: BrGlamorousVectorIcons expandvertical;
+			beTinySize;
+			margin: (BlInsets top: 2);
+			action: [ :btn |
+				breakdownContainer visibility = BlVisibility gone
+					ifTrue: [ breakdownContainer visibility: BlVisibility visible ]
+					ifFalse: [ breakdownContainer visibility: BlVisibility gone ] ]).
+		chip addChild: breakdownContainer ].
+	^ chip
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildChipsAreaSelect: selectWord on: anAnnouncer [
+	"I build a scrollable chips area capped at half its parent's height. The cap is computed once on first layout."
+	| chipsFlow chipsScroll wrap sized |
+	chipsFlow := self
+		buildWordChipsCharSize: 30
+		bopoSize: 10
+		select: selectWord
+		on: anAnnouncer.
+	chipsFlow hMatchParent; vFitContent.
+	chipsScroll := BrScrollPane new
+		aptitude: BrScrollPaneAptitude + BrGlamorousWithVerticalScrollbarAptitude;
+		matchParent;
+		content: chipsFlow.
+	wrap := BrFrame new hMatchParent; vExact: 1; addChild: chipsScroll; yourself.
+	sized := false.
+	wrap addEventHandlerOn: BlElementLayoutComputedEvent do: [ :evt |
+		sized ifFalse: [
+			wrap parent ifNotNil: [ :parent |
+				| parentH chipsH |
+				parentH := parent extent y.
+				chipsH := chipsFlow extent y.
+				(parentH > 0 and: [ chipsH > 0 ]) ifTrue: [
+					sized := true.
+					wrap vExact: (chipsH min: parentH // 2).
+					parent requestLayout ] ] ] ].
+	^ wrap
+]
+
+{ #category : 'private' }
 ChineseClipboard >> buildDetailPaneOn: anAnnouncer [
 	| pane cjkFont |
 	cjkFont := CeDictEntry cjkFontName.
 	pane := BrHorizontalPane new
-			hMatchParent;
-			vFitContent;
-			padding: (BlInsets all: 8);
-			alignCenterLeft;
-			background: (Color fromHexString: '#F5F5F5');
-			border: (BlBorder paint: (Color gray alpha: 0.2) width: 1).
-	anAnnouncer
-		when: ChineseWordSelected
-		do: [ :evt | 
-			self
-				updateDetailPane: pane
-				with: evt word
-				font: cjkFont ]
-		for: self.
+		hMatchParent;
+		vFitContent;
+		padding: (BlInsets all: 8);
+		alignCenterLeft;
+		background: (Color fromHexString: '#F5F5F5');
+		border: (BlBorder paint: (Color gray alpha: 0.2) width: 1).
+	anAnnouncer when: ChineseWordSelected do: [ :evt | | word |
+		word := evt word.
+		pane removeChildren.
+		pane addChild: (BrLabel new
+			aptitude: (BrGlamorousLabelAptitude new fontSize: 36);
+			text: (word toneColoredText fontName: cjkFont)).
+		word isKnown ifTrue: [
+			pane addChild: (BrLabel new
+				aptitude: (BrGlamorousLabelAptitude new fontSize: 16);
+				text: word definition;
+				margin: (BlInsets left: 12)) ] ] for: self.
+	^ pane
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildReaderPane [
+	"I assemble the Reader view: chips area on top, detail strip in the middle, word list at the bottom. All three are wired through a shared announcer + dedup'd selectWord block."
+	| announcer current selectWord pane firstKnown |
+	announcer := Announcer new.
+	current := nil.
+	selectWord := [ :word |
+		current == word ifFalse: [
+			current := word.
+			announcer announce: (ChineseWordSelected word: word) ] ].
+	pane := BrVerticalPane new matchParent
+		addChild: (self buildChipsAreaSelect: selectWord on: announcer);
+		addChild: (self buildDetailPaneOn: announcer);
+		addChild: (self buildWordListSelect: selectWord on: announcer);
+		yourself.
+	firstKnown := words detect: #isKnown ifNone: [ nil ].
+	firstKnown ifNotNil: [ selectWord value: firstKnown ].
 	^ pane
 ]
 
@@ -52,99 +157,61 @@ ChineseClipboard >> buildWordChipsCharSize: charSize bopoSize: bopoSize select: 
 	highlightColor := (Color fromHexString: '#FFEB3B') alpha: 0.3.
 	chipsByWord := IdentityDictionary new.
 	flow := BrHorizontalFlow new
-			hMatchParent;
-			vFitContent;
-			padding: (BlInsets all: 8).
-	words
-		do: [ :word | 
-			| chip |
-			chip := BrVerticalPane new
-					fitContent;
-					alignCenter;
-					padding: (BlInsets all: 3);
-					margin: (BlInsets all: 1);
-					when: BlDoubleClickEvent
-						do: [ :evt | 
-							evt consumed: true.
-							evt currentTarget phlow spawnObject: word ];
-					when: BlClickEvent
-						do: [ :evt | 
-							evt consumed: true.
-							selectWord value: word ].
-			word isKnown
-				ifTrue: [ chip
-						addAptitude: word tooltipAptitude;
-						addChild: (BrLabel new
-								aptitude: (BrGlamorousLabelAptitude new fontSize: charSize);
-								text: (word toneColoredText fontName: cjkFont));
-						addChild: (BrLabel new
-								aptitude: (BrGlamorousLabelAptitude new fontSize: bopoSize);
-								text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ]
-				ifFalse: [ chip
-						addChild: (BrLabel new
-								aptitude: (BrGlamorousLabelAptitude new fontSize: charSize);
-								text: (word toneColoredText fontName: cjkFont)) ].
-			chipsByWord at: word put: chip.
-			flow addChild: chip ].
-	anAnnouncer
-		when: ChineseWordSelected
-		do: [ :evt | 
-			chipsByWord valuesDo: [ :c | c background: Color transparent ].
-			(chipsByWord at: evt word ifAbsent: [ nil ])
-				ifNotNil: [ :c | c background: highlightColor ] ]
-		for: self.
+		hMatchParent;
+		vFitContent;
+		padding: (BlInsets all: 8).
+	words do: [ :word |
+		flow addChild: (self
+			buildChipFor: word
+			charSize: charSize
+			bopoSize: bopoSize
+			select: selectWord
+			chipsByWord: chipsByWord
+			font: cjkFont) ].
+	anAnnouncer when: ChineseWordSelected do: [ :evt |
+		chipsByWord valuesDo: [ :c | c background: Color transparent ].
+		(chipsByWord at: evt word ifAbsent: [ nil ]) ifNotNil: [ :c |
+			c background: highlightColor.
+			self scrollIntoView: c ] ] for: self.
 	^ flow
 ]
 
 { #category : 'private' }
 ChineseClipboard >> buildWordListSelect: selectWord on: anAnnouncer [
-	| list knownWords cjkFont |
+	| list cjkFont labelStencil |
 	cjkFont := CeDictEntry cjkFontName.
-	knownWords := words select: #isKnown.
+	labelStencil := [ :textBlock |
+		[ :w :col | BrLabel new aptitude: BrGlamorousLabelAptitude new; text: (textBlock value: w) ] ].
 	list := BrColumnedList new matchParent.
 	list rowStencil: BrGlamorousColumnedListSelectableRowElementStencilBuilder new.
-	(list column
-		title: 'Word';
-		width: 120)
-		stencil: [ :w :col | 
-			BrLabel new
-				aptitude: BrGlamorousLabelAptitude new;
-				text: ((w toneColoredText fontName: cjkFont) fontSize: 20) ].
-	(list column
-		title: 'BoPoMoFo';
-		width: 120)
-		stencil: [ :w :col | 
-			BrLabel new
-				aptitude: BrGlamorousLabelAptitude new;
-				text: ((w bopomofo asRopedText fontName: cjkFont) fontSize: 12) ].
-	(list column title: 'Definition')
-		stencil: [ :w :col | 
-			BrLabel new
-				aptitude: BrGlamorousLabelAptitude new;
-				text: w definition ].
-	list
-		items: knownWords;
-		when: BrSelectionDoubleClicked
-			do: [ :evt | evt selection do: [ :each | list phlow spawnObject: (list items at: each) ] ];
-		addShortcut: (BlShortcutWithAction new
-				combination: BlKeyCombination return;
-				action: [ list selectedItemDo: [ :word | list phlow spawnObject: word ] ]);
-		when: BrSelectionChanged
-			do: [ :evt | 
-				evt
-					selectedDo: [ :interval | 
-						| idx |
-						idx := interval isInteger ifTrue: [ interval ] ifFalse: [ interval first ].
-						selectWord value: (list items at: idx) ] ].
-	anAnnouncer
-		when: ChineseWordSelected
-		do: [ :evt | 
+	(list column title: 'Word'; width: 120) stencil: (labelStencil value: [ :w |
+		(w toneColoredText fontName: cjkFont) fontSize: 20 ]).
+	(list column title: 'BoPoMoFo'; width: 120) stencil: (labelStencil value: [ :w |
+		(w bopomofo asRopedText fontName: cjkFont) fontSize: 12 ]).
+	(list column title: 'Definition') stencil: (labelStencil value: [ :w | w definition ]).
+	list items: (words select: #isKnown).
+	list when: BrSelectionDoubleClicked do: [ :evt |
+		evt selection do: [ :each | list phlow spawnObject: (list items at: each) ] ].
+	list addShortcut: (BlShortcutWithAction new
+		combination: BlKeyCombination return;
+		action: [ list selectedItemDo: [ :word | list phlow spawnObject: word ] ]).
+	list when: BrSelectionChanged do: [ :evt |
+		evt selectedDo: [ :interval |
 			| idx |
-			idx := list items indexOf: evt word.
-			idx > 0
-				ifTrue: [ list deselectAll.
-					list selectOne: idx ] ]
-		for: self.
+			idx := interval isInteger ifTrue: [ interval ] ifFalse: [ interval first ].
+			selectWord value: (list items at: idx) ] ].
+	list addEventHandlerOn: BlElementAddedToSceneGraphEvent do: [ :evt | list requestFocus ].
+	anAnnouncer when: ChineseWordSelected do: [ :evt |
+		| idx |
+		idx := list items indexOf: evt word.
+		idx > 0 ifTrue: [
+			list deselectAll.
+			list selectOne: idx.
+			(self list: list isItemAtIndexVisible: idx)
+				ifFalse: [ list scrollToItem: evt word ].
+			"Re-focus deferred so we win against the click event re-targeting focus."
+			list space ifNotNil: [ :sp |
+				sp enqueueTask: (BlTaskAction new action: [ list requestFocus ]) ] ] ] for: self.
 	^ list
 ]
 
@@ -182,24 +249,7 @@ ChineseClipboard >> gtReaderFor: aView [
 		title: 'Reader';
 		priority: 0;
 		updateWhen: ValueChanged in: [ self announcer ];
-		stencil: [ | pane readerAnnouncer firstKnown currentWord selectWord |
-			readerAnnouncer := Announcer new.
-			selectWord := [ :word | 
-				currentWord == word
-					ifFalse: [ currentWord := word.
-						readerAnnouncer announce: (ChineseWordSelected word: word) ] ].
-			pane := BrVerticalPane new matchParent.
-			pane
-				addChild: (self
-						buildWordChipsCharSize: 30
-						bopoSize: 10
-						select: selectWord
-						on: readerAnnouncer);
-				addChild: (self buildDetailPaneOn: readerAnnouncer);
-				addChild: (self buildWordListSelect: selectWord on: readerAnnouncer).
-			firstKnown := words detect: #isKnown ifNone: [ nil ].
-			firstKnown ifNotNil: [ selectWord value: firstKnown ].
-			pane ]
+		stencil: [ self buildReaderPane ]
 ]
 
 { #category : 'gt-search' }
@@ -280,6 +330,15 @@ ChineseClipboard >> gtWordListFor: aView [
 		column: 'Definition' text: [ :w | w definition ]
 ]
 
+{ #category : 'private' }
+ChineseClipboard >> list: aList isItemAtIndexVisible: anIndex [
+	"I return true if the row at anIndex is currently rendered."
+	^ aList
+		allChildrenBreadthFirstDetect: [ :c | c isKindOf: BrInfiniteListElement ]
+		ifFound: [ :i | (i findElementHolderForDataSourcePosition: anIndex) notNil ]
+		ifNone: [ false ]
+]
+
 { #category : 'printing' }
 ChineseClipboard >> printOn: aStream [
 	aStream nextPutAll: 'ChineseClipboard'.
@@ -304,6 +363,24 @@ ChineseClipboard >> readClipboard [
 		ifTrue: [ self processText: text ]
 ]
 
+{ #category : 'private' }
+ChineseClipboard >> scrollIntoView: anElement [
+	"I find anElement's enclosing BlScrollableElement and scroll it just enough to make anElement visible."
+	| scrollable elemY elemH viewportH |
+	anElement ifNil: [ ^ self ].
+	scrollable := anElement parent.
+	[ scrollable notNil and: [ (scrollable isKindOf: BlScrollableElement) not ] ]
+		whileTrue: [ scrollable := scrollable parent ].
+	scrollable ifNil: [ ^ self ].
+	viewportH := scrollable extent y.
+	viewportH <= 0 ifTrue: [ ^ self ].
+	elemY := (anElement localPointToGlobal: 0@0) y - (scrollable localPointToGlobal: 0@0) y.
+	elemH := anElement extent y.
+	elemY < 0 ifTrue: [ ^ scrollable scrollVerticallyBy: elemY negated ].
+	elemY + elemH > viewportH ifTrue: [
+		scrollable scrollVerticallyBy: viewportH - elemY - elemH ]
+]
+
 { #category : 'actions' }
 ChineseClipboard >> startPolling [
 	"I start polling the clipboard every second. Process auto-terminates on GC."
@@ -322,23 +399,6 @@ ChineseClipboard >> stopPolling [
 	pollingProcess ifNotNil: [ :p |
 		p terminate.
 		pollingProcess := nil ]
-]
-
-{ #category : 'private' }
-ChineseClipboard >> updateDetailPane: detailPane with: word font: cjkFont [
-	detailPane removeChildren.
-	detailPane addChild: (BrLabel new
-		aptitude: (BrGlamorousLabelAptitude new fontSize: 36);
-		text: (word toneColoredText fontName: cjkFont)).
-	word isKnown ifTrue: [
-		detailPane addChild: (BrLabel new
-			aptitude: (BrGlamorousLabelAptitude new fontSize: 16);
-			text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray);
-			margin: (BlInsets left: 12)).
-		detailPane addChild: (BrLabel new
-			aptitude: (BrGlamorousLabelAptitude new fontSize: 16);
-			text: word definition;
-			margin: (BlInsets left: 12)) ]
 ]
 
 { #category : 'accessing' }
