@@ -141,8 +141,8 @@ ChineseClipboard >> buildDetailPaneOn: anAnnouncer [
 					addAptitude: (BrGlamorousWithExplicitTooltipAptitude content: [
 						BrLabel new
 							aptitude: BrGlamorousLabelAptitude new;
-							text: (', ' join: (posTags collect: [ :t |
-								t , ' = ' , (MoedictEntry posNameFor: t) ])) ])) ].
+							text: ((', ' join: (posTags collect: [ :t |
+								t , ' = ' , (MoedictEntry posNameFor: t) ])) asRopedText fontName: cjkFont) ])) ].
 			pane addChild: (BrLabel new
 				aptitude: (BrGlamorousLabelAptitude new fontSize: 16);
 				text: word definition;
