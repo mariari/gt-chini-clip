@@ -24,6 +24,29 @@ ChineseDictExamples >> bopomofoTones [
 	^ tones
 ]
 
+{ #category : 'examples - font' }
+ChineseDictExamples >> cjkFontName [
+	<gtExample>
+	| name |
+	name := CeDictEntry cjkFontName.
+	self assert: name isNotNil.
+	self assert: name isNotEmpty.
+	^ name
+]
+
+{ #category : 'examples - clipboard' }
+ChineseDictExamples >> clipboardProcessText [
+	<gtExample>
+	| tool |
+	tool := ChineseClipboard new dict: self smallDict.
+	self assert: (tool containsChinese: '你好world').
+	self assert: (tool containsChinese: 'hello world') not.
+	tool processText: '今天你好'.
+	self assert: tool words size equals: 2.
+	self assert: tool words first text equals: '今天'.
+	^ tool
+]
+
 { #category : 'examples - entry' }
 ChineseDictExamples >> entryFromLine [
 	<gtExample>
@@ -48,19 +71,18 @@ ChineseDictExamples >> entryMultipleDefinitions [
 	^ entry
 ]
 
-{ #category : 'examples - dict' }
-ChineseDictExamples >> smallDict [
+{ #category : 'examples - history' }
+ChineseDictExamples >> historyWithEntries [
 	<gtExample>
-	| dict |
-	dict := CeDict new.
-	dict addEntry: (CeDictEntry fromLine: '你 你 [ni3] /you/').
-	dict addEntry: (CeDictEntry fromLine: '好 好 [hao3] /good/well/').
-	dict addEntry: (CeDictEntry fromLine: '你好 你好 [ni3 hao3] /hello/').
-	dict addEntry: (CeDictEntry fromLine: '今天 今天 [jin1 tian1] /today/').
-	dict addEntry: (CeDictEntry fromLine: '天 天 [tian1] /day/sky/').
-	dict addEntry: (CeDictEntry fromLine: '今 今 [jin1] /now/present/').
-	self assert: dict size equals: 6.
-	^ dict
+	"I compose on clipboardProcessText's clipboard, process two new texts."
+	| tool history |
+	tool := self clipboardProcessText.
+	history := ChineseClipboardHistory on: tool.
+	self assert: history entries size equals: 1.
+	self assert: history entries first equals: '今天你好'.
+	tool processText: '天氣很好'.
+	self assert: history entries size equals: 2.
+	^ history
 ]
 
 { #category : 'examples - dict' }
@@ -97,20 +119,19 @@ ChineseDictExamples >> segmentUnknownCharacter [
 	^ words
 ]
 
-{ #category : 'examples - word' }
-ChineseDictExamples >> wordBreakdown [
+{ #category : 'examples - dict' }
+ChineseDictExamples >> smallDict [
 	<gtExample>
-	"I prove a compound word breaks down into its characters."
-	| words word parts |
-	words := self segmentGreedyLongestMatch.
-	word := words first.
-	self assert: word text equals: '你好'.
-	parts := word breakdown.
-	self assert: parts size equals: 2.
-	self assert: parts first text equals: '你'.
-	self assert: parts first definition equals: 'you'.
-	self assert: parts second text equals: '好'.
-	^ parts
+	| dict |
+	dict := CeDict new.
+	dict addEntry: (CeDictEntry fromLine: '你 你 [ni3] /you/').
+	dict addEntry: (CeDictEntry fromLine: '好 好 [hao3] /good/well/').
+	dict addEntry: (CeDictEntry fromLine: '你好 你好 [ni3 hao3] /hello/').
+	dict addEntry: (CeDictEntry fromLine: '今天 今天 [jin1 tian1] /today/').
+	dict addEntry: (CeDictEntry fromLine: '天 天 [tian1] /day/sky/').
+	dict addEntry: (CeDictEntry fromLine: '今 今 [jin1] /now/present/').
+	self assert: dict size equals: 6.
+	^ dict
 ]
 
 { #category : 'examples - tone color' }
@@ -129,6 +150,22 @@ ChineseDictExamples >> toneColors [
 ]
 
 { #category : 'examples - word' }
+ChineseDictExamples >> wordBreakdown [
+	<gtExample>
+	"I prove a compound word breaks down into its characters."
+	| words word parts |
+	words := self segmentGreedyLongestMatch.
+	word := words first.
+	self assert: word text equals: '你好'.
+	parts := word breakdown.
+	self assert: parts size equals: 2.
+	self assert: parts first text equals: '你'.
+	self assert: parts first definition equals: 'you'.
+	self assert: parts second text equals: '好'.
+	^ parts
+]
+
+{ #category : 'examples - word' }
 ChineseDictExamples >> wordToneColoredText [
 	<gtExample>
 	"I prove per-character tone coloring on a segmented word."
@@ -137,41 +174,4 @@ ChineseDictExamples >> wordToneColoredText [
 	colored := words first toneColoredText.
 	self assert: colored size equals: 2.
 	^ colored
-]
-
-{ #category : 'examples - clipboard' }
-ChineseDictExamples >> clipboardProcessText [
-	<gtExample>
-	| tool |
-	tool := ChineseClipboard new dict: self smallDict.
-	self assert: (tool containsChinese: '你好world').
-	self assert: (tool containsChinese: 'hello world') not.
-	tool processText: '今天你好'.
-	self assert: tool words size equals: 2.
-	self assert: tool words first text equals: '今天'.
-	^ tool
-]
-
-{ #category : 'examples - history' }
-ChineseDictExamples >> historyWithEntries [
-	<gtExample>
-	"I compose on clipboardProcessText's clipboard, process two new texts."
-	| tool history |
-	tool := self clipboardProcessText.
-	history := ChineseClipboardHistory on: tool.
-	self assert: history entries size equals: 1.
-	self assert: history entries first equals: '今天你好'.
-	tool processText: '天氣很好'.
-	self assert: history entries size equals: 2.
-	^ history
-]
-
-{ #category : 'examples - font' }
-ChineseDictExamples >> cjkFontName [
-	<gtExample>
-	| name |
-	name := CeDictEntry cjkFontName.
-	self assert: name isNotNil.
-	self assert: name isNotEmpty.
-	^ name
 ]

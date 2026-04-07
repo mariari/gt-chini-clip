@@ -34,8 +34,26 @@ ChineseWord >> bopomofo [
 ]
 
 { #category : 'accessing' }
+ChineseWord >> breakdown [
+	"I return my characters as individual ChineseWords looked up in the dict."
+	text size <= 1 ifTrue: [ ^ #() ].
+	dict ifNil: [ ^ #() ].
+	^ (1 to: text size) collect: [ :i | dict word: (text at: i) asString ]
+]
+
+{ #category : 'accessing' }
 ChineseWord >> definition [
 	^ entries ifEmpty: [ '(unknown)' ] ifNotEmpty: [ entries first definitions first ]
+]
+
+{ #category : 'accessing' }
+ChineseWord >> dict [
+	^ dict
+]
+
+{ #category : 'accessing' }
+ChineseWord >> dict: aDict [
+	dict := aDict
 ]
 
 { #category : 'accessing' }
@@ -46,6 +64,25 @@ ChineseWord >> entries [
 { #category : 'accessing' }
 ChineseWord >> entries: aCollection [
 	entries := aCollection
+]
+
+{ #category : 'gt-views' }
+ChineseWord >> gtBreakdownFor: aView [
+	<gtView>
+	| parts cjkFont |
+	parts := self breakdown.
+	parts ifEmpty: [ ^ aView empty ].
+	cjkFont := CeDictEntry cjkFontName.
+	^ aView columnedList
+		title: 'Breakdown';
+		priority: 10;
+		items: [ parts ];
+		column: 'Character' text: [ :w |
+			(w toneColoredText fontName: cjkFont) fontSize: 24 ] width: 60;
+		column: 'BoPoMoFo' text: [ :w |
+			w bopomofo asRopedText fontName: cjkFont ] width: 100;
+		column: 'Definition' text: [ :w | w definition ];
+		send: [ :w | w ]
 ]
 
 { #category : 'gt-views' }
@@ -93,43 +130,6 @@ ChineseWord >> printOn: aStream [
 	aStream nextPutAll: text.
 	entries ifNotEmpty: [
 		aStream nextPutAll: ' ['; nextPutAll: self bopomofo; nextPut: $] ]
-]
-
-{ #category : 'accessing' }
-ChineseWord >> breakdown [
-	"I return my characters as individual ChineseWords looked up in the dict."
-	text size <= 1 ifTrue: [ ^ #() ].
-	dict ifNil: [ ^ #() ].
-	^ (1 to: text size) collect: [ :i | dict word: (text at: i) asString ]
-]
-
-{ #category : 'accessing' }
-ChineseWord >> dict [
-	^ dict
-]
-
-{ #category : 'accessing' }
-ChineseWord >> dict: aDict [
-	dict := aDict
-]
-
-{ #category : 'gt-views' }
-ChineseWord >> gtBreakdownFor: aView [
-	<gtView>
-	| parts cjkFont |
-	parts := self breakdown.
-	parts ifEmpty: [ ^ aView empty ].
-	cjkFont := CeDictEntry cjkFontName.
-	^ aView columnedList
-		title: 'Breakdown';
-		priority: 10;
-		items: [ parts ];
-		column: 'Character' text: [ :w |
-			(w toneColoredText fontName: cjkFont) fontSize: 24 ] width: 60;
-		column: 'BoPoMoFo' text: [ :w |
-			w bopomofo asRopedText fontName: cjkFont ] width: 100;
-		column: 'Definition' text: [ :w | w definition ];
-		send: [ :w | w ]
 ]
 
 { #category : 'accessing' }
