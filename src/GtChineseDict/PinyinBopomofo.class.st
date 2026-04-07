@@ -9,6 +9,23 @@ Class {
 	#tag : 'Model'
 }
 
+{ #category : 'accessing' }
+PinyinBopomofo class >> addRareSyllablesTo: aTable [
+	"I add rare/interjection/loanword syllables that buildTable misses. Each pair is (pinyinBase, bopomofo)."
+	#(
+		('hng' 'ㄏㄥ')
+		('lia' 'ㄌㄧㄚ')
+		('yo' 'ㄧㄛ')
+		('biang' 'ㄅㄧㄤ')
+		('sei' 'ㄙㄟ')
+		('biu' 'ㄅㄧㄡ')
+		('bia' 'ㄅㄧㄚ')
+		('pua' 'ㄆㄨㄚ')
+		('hm' 'ㄏㄣ')
+		('nun' 'ㄋㄨㄣ')
+	) do: [ :pair | aTable at: pair first put: pair second ]
+]
+
 { #category : 'initialization' }
 PinyinBopomofo class >> buildTable [
 	"I return a Dictionary mapping pinyin base syllables to BoPoMoFo."
@@ -168,7 +185,11 @@ PinyinBopomofo class >> initialize [
 
 { #category : 'accessing' }
 PinyinBopomofo class >> table [
-	^ Table ifNil: [ Table := self buildTable ]
+	"I lazily build the pinyin->bopomofo table once, then add a small set of rare-syllable patches that are missing from buildTable (interjections, regional sounds, recent loanwords)."
+	^ Table ifNil: [
+		Table := self buildTable.
+		self addRareSyllablesTo: Table.
+		Table ]
 ]
 
 { #category : 'conversion' }
