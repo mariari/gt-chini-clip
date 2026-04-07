@@ -30,7 +30,7 @@ ChineseWord class >> text: aString entries: aCollection dict: aDict [
 
 { #category : 'accessing' }
 ChineseWord >> bopomofo [
-	^ entries ifEmpty: [ '' ] ifNotEmpty: [ entries first bopomofo ]
+	^ entries ifEmpty: [ '' ] ifNotEmpty: [ self preferredEntry bopomofo ]
 ]
 
 { #category : 'accessing' }
@@ -43,7 +43,7 @@ ChineseWord >> breakdown [
 
 { #category : 'accessing' }
 ChineseWord >> definition [
-	^ entries ifEmpty: [ '(unknown)' ] ifNotEmpty: [ entries first definitions first ]
+	^ entries ifEmpty: [ '(unknown)' ] ifNotEmpty: [ self preferredEntry definitions first ]
 ]
 
 { #category : 'accessing' }
@@ -129,6 +129,14 @@ ChineseWord >> isKnown [
 	^ entries isNotEmpty
 ]
 
+{ #category : 'accessing' }
+ChineseWord >> preferredEntry [
+	"I prefer entries whose first definition isn't a 'variant of' pointer. CC-CEDICT marks alt-form entries this way (e.g. 着 trad=着 is 'variant of 著', and 吃 trad=喫 is 'variant of 吃'); the other entry is the canonical one. Falls back to my first entry when none of them are variants."
+	^ entries
+		detect: [ :e | (e definitions first beginsWith: 'variant of') not ]
+		ifNone: [ entries first ]
+]
+
 { #category : 'printing' }
 ChineseWord >> printOn: aStream [
 	aStream nextPutAll: text.
@@ -148,9 +156,9 @@ ChineseWord >> text: aString [
 
 { #category : 'accessing' }
 ChineseWord >> toneColoredText [
-	"I return my text as RopedText with each character colored by its tone."
+	"I return my text as RopedText with each character colored by its tone. The preferred entry's traditional form is what I render."
 	entries ifEmpty: [ ^ text asRopedText ].
-	^ entries first toneColoredTraditional
+	^ self preferredEntry toneColoredTraditional
 ]
 
 { #category : 'accessing' }
