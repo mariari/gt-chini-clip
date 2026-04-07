@@ -108,6 +108,36 @@ ChineseWord >> gtDefinitionsFor: aView [
 ]
 
 { #category : 'gt-views' }
+ChineseWord >> gtMoedictFor: aView [
+	<gtView>
+	| entry cjkFont |
+	entry := self moedictEntry.
+	entry ifNil: [ ^ aView empty ].
+	cjkFont := CeDictEntry cjkFontName.
+	^ aView columnedList
+		title: 'MOEDICT';
+		priority: 6;
+		items: [
+			entry heteronyms gather: [ :h |
+				(h at: 'definitions' ifAbsent: [ #() ])
+					collect: [ :d | h -> d ] ] ];
+		column: 'Pinyin'
+			text: [ :pair | (pair key at: 'pinyin' ifAbsent: [ '' ]) ]
+			width: 100;
+		column: 'POS'
+			text: [ :pair |
+				| tag |
+				tag := pair value at: 'type' ifAbsent: [ '' ].
+				tag isEmpty
+					ifTrue: [ '' asRopedText ]
+					ifFalse: [ (tag , ' (' , (MoedictEntry posNameFor: tag) , ')') asRopedText fontName: cjkFont ] ]
+			width: 140;
+		column: 'Definition'
+			text: [ :pair | (pair value at: 'def' ifAbsent: [ '' ]) asRopedText fontName: cjkFont ];
+		send: [ :pair | pair value ]
+]
+
+{ #category : 'gt-views' }
 ChineseWord >> gtOverviewFor: aView [
 	<gtView>
 	| cjkFont |
@@ -127,6 +157,13 @@ ChineseWord >> gtOverviewFor: aView [
 { #category : 'testing' }
 ChineseWord >> isKnown [
 	^ entries isNotEmpty
+]
+
+{ #category : 'accessing' }
+ChineseWord >> moedictEntry [
+	"I look up my canonical traditional form in MOEDICT, returning a MoedictEntry or nil. Lookup goes through preferredEntry so simplified-source words like 东西 still find the trad headword 東西."
+	entries ifEmpty: [ ^ nil ].
+	^ MoedictDict default lookup: self preferredEntry traditional
 ]
 
 { #category : 'accessing' }

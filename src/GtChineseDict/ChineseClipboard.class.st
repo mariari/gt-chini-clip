@@ -122,13 +122,27 @@ ChineseClipboard >> buildDetailPaneOn: anAnnouncer [
 		alignCenterLeft;
 		background: (Color fromHexString: '#F5F5F5');
 		border: (BlBorder paint: (Color gray alpha: 0.2) width: 1).
-	anAnnouncer when: ChineseWordSelected do: [ :evt | | word |
+	anAnnouncer when: ChineseWordSelected do: [ :evt | | word posTags |
 		word := evt word.
 		pane removeChildren.
 		pane addChild: (BrLabel new
 			aptitude: (BrGlamorousLabelAptitude new fontSize: 36);
 			text: (word toneColoredText fontName: cjkFont)).
 		word isKnown ifTrue: [
+			"POS badge from MOEDICT, hover for English name"
+			posTags := word moedictEntry
+				ifNil: [ #() ]
+				ifNotNil: [ :e | e posTags ].
+			posTags ifNotEmpty: [
+				pane addChild: ((BrLabel new
+					aptitude: (BrGlamorousLabelAptitude new fontSize: 14);
+					text: (('[' , (' ' join: posTags) , ']') asRopedText fontName: cjkFont);
+					margin: (BlInsets left: 12))
+					addAptitude: (BrGlamorousWithExplicitTooltipAptitude content: [
+						BrLabel new
+							aptitude: BrGlamorousLabelAptitude new;
+							text: (', ' join: (posTags collect: [ :t |
+								t , ' = ' , (MoedictEntry posNameFor: t) ])) ])) ].
 			pane addChild: (BrLabel new
 				aptitude: (BrGlamorousLabelAptitude new fontSize: 16);
 				text: word definition;
