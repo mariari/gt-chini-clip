@@ -179,28 +179,49 @@ ChineseClipboard >> buildReaderPane [
 
 { #category : 'private' }
 ChineseClipboard >> buildWordChipsCharSize: charSize bopoSize: bopoSize select: selectWord on: anAnnouncer [
-	| flow highlightColor chipsByWord cjkFont |
+	"I build a vertical stack of horizontal-flow rows, starting a new row on each CR/LF in the source text so paragraph structure survives into the reader. The word list below filters newline-only words out, so this is purely a visual change to the chips area."
+	| container highlightColor chipsByWord cjkFont rows currentRow isNewline |
 	cjkFont := CeDictEntry cjkFontName.
 	highlightColor := (Color fromHexString: '#FFEB3B') alpha: 0.3.
 	chipsByWord := IdentityDictionary new.
-	flow := BrHorizontalFlow new
+	isNewline := [ :w |
+		w text size = 1 and: [
+			w text first = Character lf or: [ w text first = Character cr ] ] ].
+	rows := OrderedCollection new.
+	currentRow := OrderedCollection new.
+	words do: [ :word |
+		(isNewline value: word)
+			ifTrue: [
+				currentRow isEmpty ifFalse: [
+					rows add: currentRow.
+					currentRow := OrderedCollection new ] ]
+			ifFalse: [ currentRow add: word ] ].
+	currentRow isEmpty ifFalse: [ rows add: currentRow ].
+	container := BrVerticalPane new
 		hMatchParent;
 		vFitContent;
 		padding: (BlInsets all: 8).
-	words do: [ :word |
-		flow addChild: (self
-			buildChipFor: word
-			charSize: charSize
-			bopoSize: bopoSize
-			select: selectWord
-			chipsByWord: chipsByWord
-			font: cjkFont) ].
+	rows do: [ :row |
+		| flow |
+		flow := BrHorizontalFlow new
+			hMatchParent;
+			vFitContent;
+			yourself.
+		row do: [ :word |
+			flow addChild: (self
+				buildChipFor: word
+				charSize: charSize
+				bopoSize: bopoSize
+				select: selectWord
+				chipsByWord: chipsByWord
+				font: cjkFont) ].
+		container addChild: flow ].
 	anAnnouncer when: ChineseWordSelected do: [ :evt |
 		chipsByWord valuesDo: [ :c | c background: Color transparent ].
 		(chipsByWord at: evt word ifAbsent: [ nil ]) ifNotNil: [ :c |
 			c background: highlightColor.
 			self scrollIntoView: c ] ] for: self.
-	^ flow
+	^ container
 ]
 
 { #category : 'private' }
