@@ -368,13 +368,16 @@ ChineseClipboard >> gtActionPollingFor: anAction [
 
 { #category : 'gt-views' }
 ChineseClipboard >> gtReaderFor: aView [
+	"I build an explicit view with an updateWhen: hook installed unconditionally. The stencil handles the nil-words case — returning an empty BlElement until text arrives — so that the first evaluation on an empty clipboard doesn't short-circuit to `aView empty` (which has no update subscription and would leave the view stuck blank after polling populates words)."
 	<gtView>
-	words ifNil: [ ^ aView empty ].
 	^ aView explicit
 		title: 'Reader';
 		priority: 0;
 		updateWhen: ValueChanged in: [ self announcer ];
-		stencil: [ self buildReaderPane ]
+		stencil: [
+			words
+				ifNil: [ BlElement new ]
+				ifNotNil: [ self buildReaderPane ] ]
 ]
 
 { #category : 'gt-search' }
@@ -387,32 +390,35 @@ ChineseClipboard >> gtSearchDictFor: aSearch [
 
 { #category : 'gt-views' }
 ChineseClipboard >> gtSegmentedFor: aView [
+	"See gtReaderFor: — the nil-words check lives inside the stencil so the view-constructor is unconditional and its updateWhen: subscription is installed even on the first empty-clipboard evaluation."
 	<gtView>
 	| cjkFont |
-	words ifNil: [ ^ aView empty ].
 	cjkFont := CeDictEntry cjkFontName.
 	^ aView explicit
 		title: 'Words';
 		priority: 1;
 		updateWhen: ValueChanged in: [ self announcer ];
 		stencil: [
-			self
-				buildLinesWithChipBuilder: [ :word |
-					self buildSegmentedChipFor: word font: cjkFont ]
-				spacerCharSize: 50 ]
+			words
+				ifNil: [ BlElement new ]
+				ifNotNil: [
+					self
+						buildLinesWithChipBuilder: [ :word |
+							self buildSegmentedChipFor: word font: cjkFont ]
+						spacerCharSize: 50 ] ]
 ]
 
 { #category : 'gt-views' }
 ChineseClipboard >> gtWordListFor: aView [
+	"See gtReaderFor: — the nil-words check lives inside the items: block so the view-constructor is unconditional and its updateWhen: subscription is installed even on the first empty-clipboard evaluation."
 	<gtView>
 	| cjkFont |
-	words ifNil: [ ^ aView empty ].
 	cjkFont := CeDictEntry cjkFontName.
 	^ aView columnedList
 		title: 'Word list';
 		priority: 5;
 		updateWhen: ValueChanged in: [ self announcer ];
-		items: [ words select: #isKnown ];
+		items: [ words ifNil: [ #() ] ifNotNil: [ words select: #isKnown ] ];
 		column: 'Word' text: [ :w |
 			(w toneColoredText fontName: cjkFont) fontSize: 20 ] width: 120;
 		column: 'BoPoMoFo' text: [ :w |
