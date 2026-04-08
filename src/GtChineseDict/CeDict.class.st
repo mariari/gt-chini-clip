@@ -141,9 +141,24 @@ CeDict >> cjkTokenAt: pos in: aString [
 ]
 
 { #category : 'segmentation' }
-CeDict >> isCJK: aChar [
-	"I return true if aChar is a CJK Unified Ideograph (U+4E00..U+9FFF). This is the same range used by ChineseClipboard>>containsChinese:. Extension A and friends are not included yet."
-	^ aChar charCode between: 16r4E00 and: 16r9FFF
+CeDict class >> isCJK: aChar [
+	"I return true if aChar is in one of the Unicode CJK ranges used for segmentation. Ranges included:
+	- U+4E00..U+9FFF  CJK Unified Ideographs (most common; fast path)
+	- U+3400..U+4DBF  CJK Extension A
+	- U+F900..U+FAFF  CJK Compatibility Ideographs
+	- U+3000..U+303F  CJK Symbols and Punctuation (covers 。、， and friends)
+	- U+20000..U+2FA1F CJK Extensions B-F plus Compatibility Ideographs Supplement
+	- U+30000..U+323AF CJK Extensions G and H (Tertiary Ideographic Plane)
+	Full-width Latin forms (U+FF00..U+FFEF) are NOT included — they're semantically Latin even when rendered wide, and pulling them in would split full-width English words into per-letter tokens via the dict-lookup path. Chinese-style full-width punctuation (！？, at U+FF01/U+FF1F) is also excluded for the same reason; the ideographic punctuation in U+3000..U+303F handles the common cases."
+	| code |
+	code := aChar charCode.
+	(code between: 16r4E00 and: 16r9FFF) ifTrue: [ ^ true ].
+	(code between: 16r3400 and: 16r4DBF) ifTrue: [ ^ true ].
+	(code between: 16rF900 and: 16rFAFF) ifTrue: [ ^ true ].
+	(code between: 16r3000 and: 16r303F) ifTrue: [ ^ true ].
+	(code between: 16r20000 and: 16r2FA1F) ifTrue: [ ^ true ].
+	(code between: 16r30000 and: 16r323AF) ifTrue: [ ^ true ].
+	^ false
 ]
 
 { #category : 'segmentation' }
@@ -153,7 +168,7 @@ CeDict >> nonCjkRunAt: pos in: aString [
 	end := pos.
 	[ end <= aString size
 		and: [ ((aString at: end) isSeparator) not
-		and: [ (self isCJK: (aString at: end)) not ] ] ] whileTrue: [ end := end + 1 ].
+		and: [ (self class isCJK: (aString at: end)) not ] ] ] whileTrue: [ end := end + 1 ].
 	^ ChineseWord text: (aString copyFrom: pos to: end - 1) entries: #() dict: self
 ]
 
@@ -176,7 +191,7 @@ CeDict >> tokenAt: pos in: aString [
 	| char |
 	char := aString at: pos.
 	char isSeparator ifTrue: [ ^ self separatorTokenAt: pos in: aString ].
-	(self isCJK: char) ifTrue: [ ^ self cjkTokenAt: pos in: aString ].
+	(self class isCJK: char) ifTrue: [ ^ self cjkTokenAt: pos in: aString ].
 	^ self nonCjkRunAt: pos in: aString
 ]
 

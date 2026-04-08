@@ -317,8 +317,8 @@ ChineseClipboard >> buildWordListSelect: selectWord on: anAnnouncer [
 
 { #category : 'testing' }
 ChineseClipboard >> containsChinese: aString [
-	"I return true if the string contains CJK characters."
-	^ aString anySatisfy: [ :c | c charCode between: 16r4E00 and: 16r9FFF ]
+	"I return true if the string contains any character that the segmenter treats as CJK."
+	^ aString anySatisfy: [ :c | CeDict isCJK: c ]
 ]
 
 { #category : 'accessing' }
