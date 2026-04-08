@@ -127,8 +127,8 @@ CeDict >> initialize [
 ]
 
 { #category : 'segmentation' }
-CeDict >> longestMatchAt: pos in: aString [
-	"I return the longest matching ChineseWord starting at pos, or a single unknown character."
+CeDict >> cjkTokenAt: pos in: aString [
+	"Greedy longest-match against the dictionary, length maxWordLength down to 1. Falls back to a single unknown CJK character when no prefix matches."
 	self maxWordLength to: 1 by: -1 do: [ :len |
 		| end candidate matches |
 		end := pos + len - 1.
@@ -138,6 +138,46 @@ CeDict >> longestMatchAt: pos in: aString [
 			matches ifNotEmpty: [
 				^ ChineseWord text: candidate entries: matches dict: self ] ] ].
 	^ ChineseWord text: (aString at: pos) asString entries: #() dict: self
+]
+
+{ #category : 'segmentation' }
+CeDict >> isCJK: aChar [
+	"I return true if aChar is a CJK Unified Ideograph (U+4E00..U+9FFF). This is the same range used by ChineseClipboard>>containsChinese:. Extension A and friends are not included yet."
+	^ aChar charCode between: 16r4E00 and: 16r9FFF
+]
+
+{ #category : 'segmentation' }
+CeDict >> nonCjkRunAt: pos in: aString [
+	"Consume a maximal run of non-CJK non-separator chars as one unknown token. Skipping dict lookup here also sidesteps CC-CEDICT's stray Latin-letter entries (e.g. a single 'w' that would otherwise come back 'known' and split an English word into letter-chips)."
+	| end |
+	end := pos.
+	[ end <= aString size
+		and: [ ((aString at: end) isSeparator) not
+		and: [ (self isCJK: (aString at: end)) not ] ] ] whileTrue: [ end := end + 1 ].
+	^ ChineseWord text: (aString copyFrom: pos to: end - 1) entries: #() dict: self
+]
+
+{ #category : 'segmentation' }
+CeDict >> separatorTokenAt: pos in: aString [
+	"Whitespace stays per-char so the reader can detect line breaks and render a font-width spacer per source character — except CRLF, which is consumed as a single 2-char token so consecutive-newline detection doesn't count it as two breaks."
+	| char text |
+	char := aString at: pos.
+	text := (char = Character cr
+		and: [ pos < aString size
+		and: [ (aString at: pos + 1) = Character lf ] ])
+			ifTrue: [ String crlf ]
+			ifFalse: [ char asString ].
+	^ ChineseWord text: text entries: #() dict: self
+]
+
+{ #category : 'segmentation' }
+CeDict >> tokenAt: pos in: aString [
+	"I dispatch to the per-class token helper based on what kind of character is at pos: separator → single-char whitespace token; CJK → greedy dict match; otherwise → non-CJK run."
+	| char |
+	char := aString at: pos.
+	char isSeparator ifTrue: [ ^ self separatorTokenAt: pos in: aString ].
+	(self isCJK: char) ifTrue: [ ^ self cjkTokenAt: pos in: aString ].
+	^ self nonCjkRunAt: pos in: aString
 ]
 
 { #category : 'accessing' }
@@ -173,15 +213,15 @@ CeDict >> rebuildSimplifiedIndex [
 
 { #category : 'segmentation' }
 CeDict >> segment: aString [
-	"I segment Chinese text using greedy longest-match."
+	"I walk aString left-to-right, emitting one token per position via tokenAt:in: and advancing by its length. Tokens come in three shapes: single-char whitespace (plus CRLF collapsed to one), CJK greedy-matched dict words or single unknown CJK chars, and maximal non-CJK non-whitespace runs."
 	| result pos |
 	result := OrderedCollection new.
 	pos := 1.
 	[ pos <= aString size ] whileTrue: [
-		| word |
-		word := self longestMatchAt: pos in: aString.
-		result add: word.
-		pos := pos + word text size ].
+		| token |
+		token := self tokenAt: pos in: aString.
+		result add: token.
+		pos := pos + token text size ].
 	^ result
 ]
 

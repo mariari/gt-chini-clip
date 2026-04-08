@@ -178,44 +178,96 @@ ChineseClipboard >> buildReaderPane [
 ]
 
 { #category : 'private' }
-ChineseClipboard >> buildWordChipsCharSize: charSize bopoSize: bopoSize select: selectWord on: anAnnouncer [
-	"I build a vertical stack of horizontal-flow rows, starting a new row on each CR/LF in the source text so paragraph structure survives into the reader. The word list below filters newline-only words out, so this is purely a visual change to the chips area."
-	| container highlightColor chipsByWord cjkFont rows currentRow isNewline |
-	cjkFont := CeDictEntry cjkFontName.
-	highlightColor := (Color fromHexString: '#FFEB3B') alpha: 0.3.
-	chipsByWord := IdentityDictionary new.
-	isNewline := [ :w |
-		w text size = 1 and: [
-			w text first = Character lf or: [ w text first = Character cr ] ] ].
-	rows := OrderedCollection new.
-	currentRow := OrderedCollection new.
-	words do: [ :word |
-		(isNewline value: word)
-			ifTrue: [
-				currentRow isEmpty ifFalse: [
-					rows add: currentRow.
-					currentRow := OrderedCollection new ] ]
-			ifFalse: [ currentRow add: word ] ].
-	currentRow isEmpty ifFalse: [ rows add: currentRow ].
+ChineseClipboard >> buildBlankRowCharSize: charSize [
+	"I build a visually empty row sized to one font line at charSize, used to render blank lines from the source text (the 2nd and later of consecutive newlines). An invisible space inside gives the flow a natural height from the same font metrics used for chip labels."
+	^ BrHorizontalFlow new
+		hMatchParent;
+		vFitContent;
+		addChild: (BlTextElement new
+			editorMeasurement;
+			text: ((' ' asRopedText fontName: CeDictEntry cjkFontName) fontSize: charSize);
+			yourself);
+		yourself
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildLinesWithChipBuilder: chipBuilderBlock spacerCharSize: charSize [
+	"I build a vertical stack of horizontal-flow rows from my words: one row per source line, a blank row for each extra consecutive newline. Whitespace inside a line becomes a font-width spacer; every other token is built by chipBuilderBlock. The first newline after content ends the current row (no blank); each subsequent newline while currentFlow is already nil emits a blank row, preserving paragraph gaps from the source."
+	| container currentFlow |
 	container := BrVerticalPane new
 		hMatchParent;
 		vFitContent;
 		padding: (BlInsets all: 8).
-	rows do: [ :row |
-		| flow |
-		flow := BrHorizontalFlow new
-			hMatchParent;
-			vFitContent;
-			yourself.
-		row do: [ :word |
-			flow addChild: (self
+	currentFlow := nil.
+	words do: [ :word |
+		word isLineBreak
+			ifTrue: [
+				currentFlow isNil
+					ifTrue: [ container addChild: (self buildBlankRowCharSize: charSize) ]
+					ifFalse: [ currentFlow := nil ] ]
+			ifFalse: [
+				currentFlow ifNil: [
+					currentFlow := BrHorizontalFlow new hMatchParent; vFitContent; yourself.
+					container addChild: currentFlow ].
+				currentFlow addChild: (word isWhitespace
+					ifTrue: [ self spacerFor: word charSize: charSize ]
+					ifFalse: [ chipBuilderBlock value: word ]) ] ].
+	^ container
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildSegmentedChipFor: word font: cjkFont [
+	"I build a gtSegmentedFor: style chip for one word: colored border and background signaling known/unknown, click spawns the word, tooltip shows the definition for known words."
+	| chip |
+	chip := BrVerticalPane new
+		fitContent;
+		padding: (BlInsets all: 4);
+		margin: (BlInsets all: 2);
+		border: (BlBorder
+			paint: (word isKnown
+				ifTrue: [ Color fromHexString: '#4CAF50' ]
+				ifFalse: [ Color fromHexString: '#FF5722' ])
+			width: 1);
+		background: (word isKnown
+			ifTrue: [ Color fromHexString: '#E8F5E9' ]
+			ifFalse: [ Color fromHexString: '#FBE9E7' ]);
+		when: BlClickEvent
+			do: [ :evt |
+				evt consumed: true.
+				evt currentTarget phlow spawnObject: word ];
+		yourself.
+	word isKnown ifTrue: [
+		chip addAptitude: (BrGlamorousWithExplicitTooltipAptitude content: [
+			BrLabel new
+				aptitude: BrGlamorousLabelAptitude new;
+				text: word definition ]) ].
+	chip addChild: (BrLabel new
+		aptitude: (BrGlamorousLabelAptitude new fontSize: 50);
+		text: (word toneColoredText fontName: cjkFont)).
+	word isKnown ifTrue: [
+		chip addChild: (BrLabel new
+			aptitude: (BrGlamorousLabelAptitude new fontSize: 20);
+			text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
+	^ chip
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildWordChipsCharSize: charSize bopoSize: bopoSize select: selectWord on: anAnnouncer [
+	"I build the reader's chips area as a vertical stack of per-line horizontal flows via buildLinesWithChipBuilder:, passing my per-word chip factory as the block. After build, I wire the ChineseWordSelected announcer to highlight and scroll the chip for the currently-selected word."
+	| highlightColor chipsByWord cjkFont container |
+	cjkFont := CeDictEntry cjkFontName.
+	highlightColor := (Color fromHexString: '#FFEB3B') alpha: 0.3.
+	chipsByWord := IdentityDictionary new.
+	container := self
+		buildLinesWithChipBuilder: [ :word |
+			self
 				buildChipFor: word
 				charSize: charSize
 				bopoSize: bopoSize
 				select: selectWord
 				chipsByWord: chipsByWord
-				font: cjkFont) ].
-		container addChild: flow ].
+				font: cjkFont ]
+		spacerCharSize: charSize.
 	anAnnouncer when: ChineseWordSelected do: [ :evt |
 		chipsByWord valuesDo: [ :c | c background: Color transparent ].
 		(chipsByWord at: evt word ifAbsent: [ nil ]) ifNotNil: [ :c |
@@ -318,46 +370,11 @@ ChineseClipboard >> gtSegmentedFor: aView [
 		title: 'Words';
 		priority: 1;
 		updateWhen: ValueChanged in: [ self announcer ];
-		stencil: [ | flow |
-			flow := BrHorizontalFlow new
-					matchParent;
-					padding: (BlInsets all: 8).
-			words
-				do: [ :word | 
-					| chip |
-					chip := BrVerticalPane new
-							fitContent;
-							padding: (BlInsets all: 4);
-							margin: (BlInsets all: 2);
-							border: (BlBorder
-									paint: (word isKnown
-											ifTrue: [ Color fromHexString: '#4CAF50' ]
-											ifFalse: [ Color fromHexString: '#FF5722' ])
-									width: 1);
-							background: (word isKnown
-									ifTrue: [ Color fromHexString: '#E8F5E9' ]
-									ifFalse: [ Color fromHexString: '#FBE9E7' ]);
-							when: BlClickEvent
-								do: [ :evt | 
-									evt consumed: true.
-									evt currentTarget phlow spawnObject: word ].
-					word isKnown
-						ifTrue: [ chip
-								addAptitude: (BrGlamorousWithExplicitTooltipAptitude
-										content: [ BrLabel new
-												aptitude: BrGlamorousLabelAptitude new;
-												text: word definition ]) ].
-					chip
-						addChild: (BrLabel new
-								aptitude: (BrGlamorousLabelAptitude new fontSize: 50);
-								text: (word toneColoredText fontName: cjkFont)).
-					word isKnown
-						ifTrue: [ chip
-								addChild: (BrLabel new
-										aptitude: (BrGlamorousLabelAptitude new fontSize: 20);
-										text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
-					flow addChild: chip ].
-			flow ]
+		stencil: [
+			self
+				buildLinesWithChipBuilder: [ :word |
+					self buildSegmentedChipFor: word font: cjkFont ]
+				spacerCharSize: 50 ]
 ]
 
 { #category : 'gt-views' }
@@ -427,6 +444,15 @@ ChineseClipboard >> scrollIntoView: anElement [
 	elemY < 0 ifTrue: [ ^ scrollable scrollVerticallyBy: elemY negated ].
 	elemY + elemH > viewportH ifTrue: [
 		scrollable scrollVerticallyBy: viewportH - elemY - elemH ]
+]
+
+{ #category : 'private' }
+ChineseClipboard >> spacerFor: word charSize: charSize [
+	"I render a whitespace token as a BlTextElement at the same font and size as chip labels. `editorMeasurement` swaps in the advance-based measurement strategy that Bloc's code editors use, so the element's extent reflects the font's actual glyph advance — even for boundary whitespace, where the default label measurement strategy returns 0."
+	^ BlTextElement new
+		editorMeasurement;
+		text: ((word text asRopedText fontName: CeDictEntry cjkFontName) fontSize: charSize);
+		yourself
 ]
 
 { #category : 'actions' }
