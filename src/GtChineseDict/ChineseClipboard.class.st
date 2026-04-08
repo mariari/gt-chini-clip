@@ -30,13 +30,67 @@ ChineseClipboard >> announcer [
 ]
 
 { #category : 'private' }
+ChineseClipboard >> addBreakdownAffordanceTo: chip for: word charSize: charSize bopoSize: bopoSize select: selectWord chipsByWord: chipsByWord font: cjkFont [
+	"I add a toggle button and a hidden per-character breakdown row to chip. Sub-chips are built at a smaller charSize/bopoSize via buildChipFor:, and the toggle flips the container's visibility between gone and visible."
+	| breakdownContainer |
+	breakdownContainer := BrHorizontalFlow new
+		fitContent;
+		padding: (BlInsets top: 2);
+		visibility: BlVisibility gone;
+		yourself.
+	word breakdown do: [ :sub |
+		breakdownContainer addChild: (self
+			buildChipFor: sub
+			charSize: charSize - 8
+			bopoSize: bopoSize - 2
+			select: selectWord
+			chipsByWord: chipsByWord
+			font: cjkFont) ].
+	chip addChild: (BrButton new
+		aptitude: BrGlamorousButtonWithIconAptitude;
+		icon: BrGlamorousVectorIcons expandvertical;
+		beTinySize;
+		margin: (BlInsets top: 2);
+		action: [ :btn |
+			breakdownContainer visibility = BlVisibility gone
+				ifTrue: [ breakdownContainer visibility: BlVisibility visible ]
+				ifFalse: [ breakdownContainer visibility: BlVisibility gone ] ]).
+	chip addChild: breakdownContainer
+]
+
+{ #category : 'private' }
 ChineseClipboard >> buildChipFor: word charSize: charSize bopoSize: bopoSize select: selectWord chipsByWord: chipsByWord font: cjkFont [
-	"I build a chip for one word, with optional expand-to-breakdown affordance."
-	| chip mainBlock breakdownContainer expandable |
+	"I assemble the outer chip for one segmented token: a padded/margined vertical frame containing the clickable main block (character label plus optional bopomofo row for known Chinese words). For multi-character known Chinese words I also add a breakdown affordance below — a toggle button that reveals a row of per-character sub-chips."
+	| chip mainBlock |
 	chip := BrVerticalPane new
 		fitContent; alignCenter;
 		padding: (BlInsets all: 3);
-		margin: (BlInsets all: 1).
+		margin: (BlInsets all: 1);
+		yourself.
+	mainBlock := self
+		buildChipMainBlockFor: word
+		charSize: charSize
+		bopoSize: bopoSize
+		select: selectWord
+		font: cjkFont.
+	chipsByWord at: word put: mainBlock.
+	chip addChild: mainBlock.
+	(word isKnown and: [ word text size > 1 ]) ifTrue: [
+		self
+			addBreakdownAffordanceTo: chip
+			for: word
+			charSize: charSize
+			bopoSize: bopoSize
+			select: selectWord
+			chipsByWord: chipsByWord
+			font: cjkFont ].
+	^ chip
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildChipMainBlockFor: word charSize: charSize bopoSize: bopoSize select: selectWord font: cjkFont [
+	"I build the clickable main block of a chip: a fitContent vertical pane wired to select on click and spawn-inspector on double-click, containing the character label (tone-colored for known Chinese words). For known words I also add a smaller bopomofo label beneath and a definition tooltip."
+	| mainBlock |
 	mainBlock := BrVerticalPane new
 		fitContent; alignCenter;
 		when: BlDoubleClickEvent do: [ :evt |
@@ -44,7 +98,8 @@ ChineseClipboard >> buildChipFor: word charSize: charSize bopoSize: bopoSize sel
 			evt currentTarget phlow spawnObject: word ];
 		when: BlClickEvent do: [ :evt |
 			evt consumed: true.
-			selectWord value: word ].
+			selectWord value: word ];
+		yourself.
 	mainBlock addChild: (BrLabel new
 		aptitude: (BrGlamorousLabelAptitude new fontSize: charSize);
 		text: (word toneColoredText fontName: cjkFont)).
@@ -54,32 +109,7 @@ ChineseClipboard >> buildChipFor: word charSize: charSize bopoSize: bopoSize sel
 			addChild: (BrLabel new
 				aptitude: (BrGlamorousLabelAptitude new fontSize: bopoSize);
 				text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
-	chipsByWord at: word put: mainBlock.
-	chip addChild: mainBlock.
-	expandable := word isKnown and: [ word text size > 1 ].
-	expandable ifTrue: [
-		breakdownContainer := BrHorizontalFlow new
-			fitContent; padding: (BlInsets top: 2);
-			visibility: BlVisibility gone.
-		word breakdown do: [ :sub |
-			breakdownContainer addChild: (self
-				buildChipFor: sub
-				charSize: charSize - 8
-				bopoSize: bopoSize - 2
-				select: selectWord
-				chipsByWord: chipsByWord
-				font: cjkFont) ].
-		chip addChild: (BrButton new
-			aptitude: BrGlamorousButtonWithIconAptitude;
-			icon: BrGlamorousVectorIcons expandvertical;
-			beTinySize;
-			margin: (BlInsets top: 2);
-			action: [ :btn |
-				breakdownContainer visibility = BlVisibility gone
-					ifTrue: [ breakdownContainer visibility: BlVisibility visible ]
-					ifFalse: [ breakdownContainer visibility: BlVisibility gone ] ]).
-		chip addChild: breakdownContainer ].
-	^ chip
+	^ mainBlock
 ]
 
 { #category : 'private' }
@@ -253,10 +283,9 @@ ChineseClipboard >> buildSegmentedChipFor: word font: cjkFont [
 
 { #category : 'private' }
 ChineseClipboard >> buildWordChipsCharSize: charSize bopoSize: bopoSize select: selectWord on: anAnnouncer [
-	"I build the reader's chips area as a vertical stack of per-line horizontal flows via buildLinesWithChipBuilder:, passing my per-word chip factory as the block. After build, I wire the ChineseWordSelected announcer to highlight and scroll the chip for the currently-selected word."
-	| highlightColor chipsByWord cjkFont container |
+	"I build the reader's chips area as a vertical stack of per-line horizontal flows via buildLinesWithChipBuilder:, passing my per-word chip factory as the block. After building, I wire the ChineseWordSelected announcer to highlight and scroll the chip for the currently-selected word."
+	| chipsByWord cjkFont container |
 	cjkFont := CeDictEntry cjkFontName.
-	highlightColor := (Color fromHexString: '#FFEB3B') alpha: 0.3.
 	chipsByWord := IdentityDictionary new.
 	container := self
 		buildLinesWithChipBuilder: [ :word |
@@ -268,11 +297,7 @@ ChineseClipboard >> buildWordChipsCharSize: charSize bopoSize: bopoSize select: 
 				chipsByWord: chipsByWord
 				font: cjkFont ]
 		spacerCharSize: charSize.
-	anAnnouncer when: ChineseWordSelected do: [ :evt |
-		chipsByWord valuesDo: [ :c | c background: Color transparent ].
-		(chipsByWord at: evt word ifAbsent: [ nil ]) ifNotNil: [ :c |
-			c background: highlightColor.
-			self scrollIntoView: c ] ] for: self.
+	self wireSelectionHighlightFor: chipsByWord on: anAnnouncer.
 	^ container
 ]
 
@@ -453,6 +478,18 @@ ChineseClipboard >> spacerFor: word charSize: charSize [
 		editorMeasurement;
 		text: ((word text asRopedText fontName: CeDictEntry cjkFontName) fontSize: charSize);
 		yourself
+]
+
+{ #category : 'private' }
+ChineseClipboard >> wireSelectionHighlightFor: chipsByWord on: anAnnouncer [
+	"I subscribe to ChineseWordSelected on anAnnouncer: when a word is selected, I clear all chip backgrounds in chipsByWord, then paint the selected word's chip and scroll it into view. The subscription is tied to self via the `for: self` argument, so it dies when the clipboard is garbage-collected."
+	| highlightColor |
+	highlightColor := (Color fromHexString: '#FFEB3B') alpha: 0.3.
+	anAnnouncer when: ChineseWordSelected do: [ :evt |
+		chipsByWord valuesDo: [ :c | c background: Color transparent ].
+		(chipsByWord at: evt word ifAbsent: [ nil ]) ifNotNil: [ :c |
+			c background: highlightColor.
+			self scrollIntoView: c ] ] for: self
 ]
 
 { #category : 'actions' }
