@@ -111,8 +111,8 @@ CustomDict >> loadEntries [
 ]
 
 { #category : 'segmentation' }
-CustomDict >> longestMatchAt: pos in: aString [
-	"I prefer my own entries: take the longest custom match starting here. Only fall back to a base match if no custom match starts here, and only if it doesn't shadow a custom entry that begins later in the lookahead window."
+CustomDict >> cjkTokenAt: pos in: aString [
+	"I prefer my own entries: take the longest custom match starting here. Only fall back to a base-dict match if no custom match starts here, and only if the base match wouldn't shadow a custom entry that begins later in the lookahead window. Overrides CeDict>>cjkTokenAt:in: to preserve the lookahead-respecting behavior that CustomDict had prior to the segmenter dispatch refactor."
 	| ownMax endCap |
 	ownMax := self ownLongestMatchAt: pos in: aString.
 	ownMax ifNotNil: [ ^ ownMax ].

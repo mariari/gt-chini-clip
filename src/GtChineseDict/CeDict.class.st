@@ -163,26 +163,27 @@ CeDict class >> isCJK: aChar [
 
 { #category : 'segmentation' }
 CeDict >> nonCjkRunAt: pos in: aString [
-	"Consume a maximal run of non-CJK non-separator chars as one unknown token. Skipping dict lookup here also sidesteps CC-CEDICT's stray Latin-letter entries (e.g. a single 'w' that would otherwise come back 'known' and split an English word into letter-chips)."
+	"Consume a maximal run of non-CJK non-separator chars and return one EnglishWord for the whole run. Skipping dict lookup here also sidesteps CC-CEDICT's stray Latin-letter entries (e.g. a single 'w' that would otherwise come back 'known' and split an English word into letter-chips)."
 	| end |
 	end := pos.
 	[ end <= aString size
 		and: [ ((aString at: end) isSeparator) not
 		and: [ (self class isCJK: (aString at: end)) not ] ] ] whileTrue: [ end := end + 1 ].
-	^ ChineseWord text: (aString copyFrom: pos to: end - 1) entries: #() dict: self
+	^ EnglishWord text: (aString copyFrom: pos to: end - 1) dict: self
 ]
 
 { #category : 'segmentation' }
 CeDict >> separatorTokenAt: pos in: aString [
-	"Whitespace stays per-char so the reader can detect line breaks and render a font-width spacer per source character — except CRLF, which is consumed as a single 2-char token so consecutive-newline detection doesn't count it as two breaks."
-	| char text |
+	"Separators stay per-char so the reader's row builder can see each line break and render each space/tab as its own font-width spacer. CR+LF is consumed as a single 2-character LineBreakToken so consecutive-newline detection doesn't count it as two breaks. Lone CR and lone LF also become LineBreakTokens; every other separator becomes a WhitespaceToken."
+	| char |
 	char := aString at: pos.
-	text := (char = Character cr
+	(char = Character cr
 		and: [ pos < aString size
 		and: [ (aString at: pos + 1) = Character lf ] ])
-			ifTrue: [ String crlf ]
-			ifFalse: [ char asString ].
-	^ ChineseWord text: text entries: #() dict: self
+			ifTrue: [ ^ LineBreakToken text: String crlf ].
+	(char = Character cr or: [ char = Character lf ])
+		ifTrue: [ ^ LineBreakToken text: char asString ].
+	^ WhitespaceToken text: char asString
 ]
 
 { #category : 'segmentation' }

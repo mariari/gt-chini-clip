@@ -1,8 +1,7 @@
 Class {
 	#name : 'ChineseWord',
-	#superclass : 'Object',
+	#superclass : 'SegmentedToken',
 	#instVars : [
-		'text',
 		'entries',
 		'dict'
 	],
@@ -142,20 +141,6 @@ ChineseWord >> isKnown [
 	^ entries isNotEmpty
 ]
 
-{ #category : 'testing' }
-ChineseWord >> isLineBreak [
-	"I return true if my text is a single CR or LF, or the 2-char CRLF that the segmenter emits as one token. Line breaks are still whitespace categorically; callers that distinguish row-flush from inline spacer should test isLineBreak first."
-	^ text = String lf
-		or: [ text = String cr
-		or: [ text = String crlf ] ]
-]
-
-{ #category : 'testing' }
-ChineseWord >> isWhitespace [
-	"I return true if my text is a single whitespace character (space, tab, CR, LF, etc.). Line breaks satisfy this too, so callers that distinguish row-flush from inline spacer should test isLineBreak first."
-	^ text size = 1 and: [ text first isSeparator ]
-]
-
 { #category : 'accessing' }
 ChineseWord >> moedictEntry [
 	"I look up my canonical traditional form in MOEDICT, returning a MoedictEntry or nil. Lookup goes through preferredEntry so simplified-source words like 东西 still find the trad headword 東西."
@@ -176,16 +161,6 @@ ChineseWord >> printOn: aStream [
 	aStream nextPutAll: text.
 	entries ifNotEmpty: [
 		aStream nextPutAll: ' ['; nextPutAll: self bopomofo; nextPut: $] ]
-]
-
-{ #category : 'accessing' }
-ChineseWord >> text [
-	^ text
-]
-
-{ #category : 'accessing' }
-ChineseWord >> text: aString [
-	text := aString
 ]
 
 { #category : 'accessing' }

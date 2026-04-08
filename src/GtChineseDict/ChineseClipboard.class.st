@@ -209,7 +209,7 @@ ChineseClipboard >> buildLinesWithChipBuilder: chipBuilderBlock spacerCharSize: 
 				currentFlow ifNil: [
 					currentFlow := BrHorizontalFlow new hMatchParent; vFitContent; yourself.
 					container addChild: currentFlow ].
-				currentFlow addChild: (word isWhitespace
+				currentFlow addChild: (word isSpacer
 					ifTrue: [ self spacerFor: word charSize: charSize ]
 					ifFalse: [ chipBuilderBlock value: word ]) ] ].
 	^ container
