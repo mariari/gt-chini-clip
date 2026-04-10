@@ -97,7 +97,7 @@ ChineseDictExamples >> lookupTraditional [
 
 { #category : 'examples - architecture' }
 ChineseDictExamples >> packageArchitecture [
-	"I visualize the GtChineseDict package as nested containers: tags → classes → methods, mirroring the BeamCodeVisualizer layout. Green blocks are instance methods, blue are class-side, sized by lines of code."
+	"I visualize the GtChineseDict package grouped by tag, each tag containing its classes with method-density blocks (green = instance, blue = class-side, sized by LOC). Same structure as BeamCodeVisualizer."
 	<gtExample>
 	| view tags |
 	view := GtMondrian new.
@@ -105,14 +105,16 @@ ChineseDictExamples >> packageArchitecture [
 		reject: [ :t | t name = 'Manifest' ].
 	view nodes
 		shape: [ :each |
-			GtMondrianUMLClassElement withDefaultContainer
-				label: each name ];
+			(GtMondrianUMLClassElement withDefaultContainer
+				label: each name)
+				margin: (BlInsets all: 5) ];
 		with: tags;
 		forEach: [ :tag |
 			view nodes
 				shape: [ :cls |
-					GtMondrianUMLClassElement withDefaultContainer
-						label: cls name ];
+					(GtMondrianUMLClassElement withDefaultContainer
+						label: cls name)
+						margin: (BlInsets all: 3) ];
 				with: (tag classes sorted: [ :a :b | a name < b name ]);
 				forEach: [ :cls |
 					view nodes
@@ -127,8 +129,7 @@ ChineseDictExamples >> packageArchitecture [
 						with: (cls methods sorted: [ :a :b | a size < b size ])
 							, (cls class methods sorted: [ :a :b | a size < b size ]).
 					view layout grid ].
-			view edges connectFrom: #superclass.
-			view layout tree ].
+			view layout rectanglePack ].
 	view layout rectanglePack.
 	^ view
 ]
