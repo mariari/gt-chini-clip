@@ -51,6 +51,27 @@ CeDict class >> downloadDictionary [
 	^ file
 ]
 
+{ #category : 'segmentation' }
+CeDict class >> isCJK: aChar [
+	"I return true if aChar is in one of the Unicode CJK ranges used for segmentation. Ranges included:
+	- U+4E00..U+9FFF  CJK Unified Ideographs (most common; fast path)
+	- U+3400..U+4DBF  CJK Extension A
+	- U+F900..U+FAFF  CJK Compatibility Ideographs
+	- U+3000..U+303F  CJK Symbols and Punctuation (covers 。、， and friends)
+	- U+20000..U+2FA1F CJK Extensions B-F plus Compatibility Ideographs Supplement
+	- U+30000..U+323AF CJK Extensions G and H (Tertiary Ideographic Plane)
+	Full-width Latin forms (U+FF00..U+FFEF) are NOT included — they're semantically Latin even when rendered wide, and pulling them in would split full-width English words into per-letter tokens via the dict-lookup path. Chinese-style full-width punctuation (！？, at U+FF01/U+FF1F) is also excluded for the same reason; the ideographic punctuation in U+3000..U+303F handles the common cases."
+	| code |
+	code := aChar charCode.
+	(code between: 16r4E00 and: 16r9FFF) ifTrue: [ ^ true ].
+	(code between: 16r3400 and: 16r4DBF) ifTrue: [ ^ true ].
+	(code between: 16rF900 and: 16rFAFF) ifTrue: [ ^ true ].
+	(code between: 16r3000 and: 16r303F) ifTrue: [ ^ true ].
+	(code between: 16r20000 and: 16r2FA1F) ifTrue: [ ^ true ].
+	(code between: 16r30000 and: 16r323AF) ifTrue: [ ^ true ].
+	^ false
+]
+
 { #category : 'instance creation' }
 CeDict class >> loadFrom: aFileReference [
 	| dict |
@@ -86,6 +107,20 @@ CeDict >> addEntry: aCeDictEntry [
 	aCeDictEntry simplified = aCeDictEntry traditional ifFalse: [
 		(simplifiedIndex at: aCeDictEntry simplified ifAbsentPut: [ OrderedCollection new ])
 			add: aCeDictEntry ]
+]
+
+{ #category : 'segmentation' }
+CeDict >> cjkTokenAt: pos in: aString [
+	"Greedy longest-match against the dictionary, length maxWordLength down to 1. Falls back to a single unknown CJK character when no prefix matches."
+	self maxWordLength to: 1 by: -1 do: [ :len |
+		| end candidate matches |
+		end := pos + len - 1.
+		end > aString size ifFalse: [
+			candidate := aString copyFrom: pos to: end.
+			matches := self lookup: candidate.
+			matches ifNotEmpty: [
+				^ TraditionalWord text: candidate entries: matches dict: self ] ] ].
+	^ TraditionalWord text: (aString at: pos) asString entries: #() dict: self
 ]
 
 { #category : 'gt-views' }
@@ -126,76 +161,6 @@ CeDict >> initialize [
 	simplifiedIndex := Dictionary new
 ]
 
-{ #category : 'segmentation' }
-CeDict >> cjkTokenAt: pos in: aString [
-	"Greedy longest-match against the dictionary, length maxWordLength down to 1. Falls back to a single unknown CJK character when no prefix matches."
-	self maxWordLength to: 1 by: -1 do: [ :len |
-		| end candidate matches |
-		end := pos + len - 1.
-		end > aString size ifFalse: [
-			candidate := aString copyFrom: pos to: end.
-			matches := self lookup: candidate.
-			matches ifNotEmpty: [
-				^ TraditionalWord text: candidate entries: matches dict: self ] ] ].
-	^ TraditionalWord text: (aString at: pos) asString entries: #() dict: self
-]
-
-{ #category : 'segmentation' }
-CeDict class >> isCJK: aChar [
-	"I return true if aChar is in one of the Unicode CJK ranges used for segmentation. Ranges included:
-	- U+4E00..U+9FFF  CJK Unified Ideographs (most common; fast path)
-	- U+3400..U+4DBF  CJK Extension A
-	- U+F900..U+FAFF  CJK Compatibility Ideographs
-	- U+3000..U+303F  CJK Symbols and Punctuation (covers 。、， and friends)
-	- U+20000..U+2FA1F CJK Extensions B-F plus Compatibility Ideographs Supplement
-	- U+30000..U+323AF CJK Extensions G and H (Tertiary Ideographic Plane)
-	Full-width Latin forms (U+FF00..U+FFEF) are NOT included — they're semantically Latin even when rendered wide, and pulling them in would split full-width English words into per-letter tokens via the dict-lookup path. Chinese-style full-width punctuation (！？, at U+FF01/U+FF1F) is also excluded for the same reason; the ideographic punctuation in U+3000..U+303F handles the common cases."
-	| code |
-	code := aChar charCode.
-	(code between: 16r4E00 and: 16r9FFF) ifTrue: [ ^ true ].
-	(code between: 16r3400 and: 16r4DBF) ifTrue: [ ^ true ].
-	(code between: 16rF900 and: 16rFAFF) ifTrue: [ ^ true ].
-	(code between: 16r3000 and: 16r303F) ifTrue: [ ^ true ].
-	(code between: 16r20000 and: 16r2FA1F) ifTrue: [ ^ true ].
-	(code between: 16r30000 and: 16r323AF) ifTrue: [ ^ true ].
-	^ false
-]
-
-{ #category : 'segmentation' }
-CeDict >> nonCjkRunAt: pos in: aString [
-	"Consume a maximal run of non-CJK non-separator chars and return one EnglishWord for the whole run. Skipping dict lookup here also sidesteps CC-CEDICT's stray Latin-letter entries (e.g. a single 'w' that would otherwise come back 'known' and split an English word into letter-chips)."
-	| end |
-	end := pos.
-	[ end <= aString size
-		and: [ ((aString at: end) isSeparator) not
-		and: [ (self class isCJK: (aString at: end)) not ] ] ] whileTrue: [ end := end + 1 ].
-	^ EnglishWord text: (aString copyFrom: pos to: end - 1) dict: self
-]
-
-{ #category : 'segmentation' }
-CeDict >> separatorTokenAt: pos in: aString [
-	"Separators stay per-char so the reader's row builder can see each line break and render each space/tab as its own font-width spacer. CR+LF is consumed as a single 2-character LineBreakToken so consecutive-newline detection doesn't count it as two breaks. Lone CR and lone LF also become LineBreakTokens; every other separator becomes a WhitespaceToken."
-	| char |
-	char := aString at: pos.
-	(char = Character cr
-		and: [ pos < aString size
-		and: [ (aString at: pos + 1) = Character lf ] ])
-			ifTrue: [ ^ LineBreakToken text: String crlf ].
-	(char = Character cr or: [ char = Character lf ])
-		ifTrue: [ ^ LineBreakToken text: char asString ].
-	^ WhitespaceToken text: char asString
-]
-
-{ #category : 'segmentation' }
-CeDict >> tokenAt: pos in: aString [
-	"I dispatch to the per-class token helper based on what kind of character is at pos: separator → single-char whitespace token; CJK → greedy dict match; otherwise → non-CJK run."
-	| char |
-	char := aString at: pos.
-	char isSeparator ifTrue: [ ^ self separatorTokenAt: pos in: aString ].
-	(self class isCJK: char) ifTrue: [ ^ self cjkTokenAt: pos in: aString ].
-	^ self nonCjkRunAt: pos in: aString
-]
-
 { #category : 'accessing' }
 CeDict >> lookup: aString [
 	"I return all entries matching aString as either traditional or simplified Chinese."
@@ -207,6 +172,17 @@ CeDict >> lookup: aString [
 { #category : 'accessing' }
 CeDict >> maxWordLength [
 	^ 6
+]
+
+{ #category : 'segmentation' }
+CeDict >> nonCjkRunAt: pos in: aString [
+	"Consume a maximal run of non-CJK non-separator chars and return one EnglishWord for the whole run. Skipping dict lookup here also sidesteps CC-CEDICT's stray Latin-letter entries (e.g. a single 'w' that would otherwise come back 'known' and split an English word into letter-chips)."
+	| end |
+	end := pos.
+	[ end <= aString size
+		and: [ ((aString at: end) isSeparator) not
+		and: [ (self class isCJK: (aString at: end)) not ] ] ] whileTrue: [ end := end + 1 ].
+	^ EnglishWord text: (aString copyFrom: pos to: end - 1) dict: self
 ]
 
 { #category : 'printing' }
@@ -241,9 +217,33 @@ CeDict >> segment: aString [
 	^ result
 ]
 
+{ #category : 'segmentation' }
+CeDict >> separatorTokenAt: pos in: aString [
+	"Separators stay per-char so the reader's row builder can see each line break and render each space/tab as its own font-width spacer. CR+LF is consumed as a single 2-character LineBreakToken so consecutive-newline detection doesn't count it as two breaks. Lone CR and lone LF also become LineBreakTokens; every other separator becomes a WhitespaceToken."
+	| char |
+	char := aString at: pos.
+	(char = Character cr
+		and: [ pos < aString size
+		and: [ (aString at: pos + 1) = Character lf ] ])
+			ifTrue: [ ^ LineBreakToken text: String crlf ].
+	(char = Character cr or: [ char = Character lf ])
+		ifTrue: [ ^ LineBreakToken text: char asString ].
+	^ WhitespaceToken text: char asString
+]
+
 { #category : 'accessing' }
 CeDict >> size [
 	^ entries size
+]
+
+{ #category : 'segmentation' }
+CeDict >> tokenAt: pos in: aString [
+	"I dispatch to the per-class token helper based on what kind of character is at pos: separator → single-char whitespace token; CJK → greedy dict match; otherwise → non-CJK run."
+	| char |
+	char := aString at: pos.
+	char isSeparator ifTrue: [ ^ self separatorTokenAt: pos in: aString ].
+	(self class isCJK: char) ifTrue: [ ^ self cjkTokenAt: pos in: aString ].
+	^ self nonCjkRunAt: pos in: aString
 ]
 
 { #category : 'accessing' }

@@ -8,7 +8,6 @@ I am a sibling of WhitespaceToken under SegmentedToken, NOT a subclass of it. In
 Class {
 	#name : 'LineBreakToken',
 	#superclass : 'SegmentedToken',
-	#instVars : [ ],
 	#category : 'GtChineseDict-Model',
 	#package : 'GtChineseDict',
 	#tag : 'Model'

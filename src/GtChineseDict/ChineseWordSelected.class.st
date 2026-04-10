@@ -4,8 +4,9 @@ Class {
 	#instVars : [
 		'word'
 	],
-	#category : 'GtChineseDict',
-	#package : 'GtChineseDict'
+	#category : 'GtChineseDict-Announcer',
+	#package : 'GtChineseDict',
+	#tag : 'Announcer'
 }
 
 { #category : 'instance creation' }

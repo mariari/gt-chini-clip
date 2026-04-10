@@ -6,7 +6,6 @@ Line breaks (CR, LF, CRLF) are NOT instances of me. They are LineBreakToken, a s
 Class {
 	#name : 'WhitespaceToken',
 	#superclass : 'SegmentedToken',
-	#instVars : [ ],
 	#category : 'GtChineseDict-Model',
 	#package : 'GtChineseDict',
 	#tag : 'Model'

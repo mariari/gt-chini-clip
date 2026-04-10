@@ -95,6 +95,44 @@ ChineseDictExamples >> lookupTraditional [
 	^ results first
 ]
 
+{ #category : 'examples - architecture' }
+ChineseDictExamples >> packageArchitecture [
+	"I visualize the GtChineseDict package as nested containers: tags → classes → methods, mirroring the BeamCodeVisualizer layout. Green blocks are instance methods, blue are class-side, sized by lines of code."
+	<gtExample>
+	| view tags |
+	view := GtMondrian new.
+	tags := (RPackageOrganizer default packageNamed: 'GtChineseDict') tags
+		reject: [ :t | t name = 'Manifest' ].
+	view nodes
+		shape: [ :each |
+			GtMondrianUMLClassElement withDefaultContainer
+				label: each name ];
+		with: tags;
+		forEach: [ :tag |
+			view nodes
+				shape: [ :cls |
+					GtMondrianUMLClassElement withDefaultContainer
+						label: cls name ];
+				with: (tag classes sorted: [ :a :b | a name < b name ]);
+				forEach: [ :cls |
+					view nodes
+						shape: [ :m |
+							BlElement new
+								background: (m isClassSide
+									ifTrue: [ Color fromHexString: '#90CAF9' ]
+									ifFalse: [ Color fromHexString: '#A5D6A7' ]);
+								border: (BlBorder paint: Color gray width: 0.5);
+								size: (5 max: 2 * m linesOfCode) @ (5 max: 2 * m numLiterals);
+								margin: (BlInsets all: 1) ];
+						with: (cls methods sorted: [ :a :b | a size < b size ])
+							, (cls class methods sorted: [ :a :b | a size < b size ]).
+					view layout grid ].
+			view edges connectFrom: #superclass.
+			view layout tree ].
+	view layout rectanglePack.
+	^ view
+]
+
 { #category : 'examples - segmentation' }
 ChineseDictExamples >> segmentGreedyLongestMatch [
 	<gtExample>

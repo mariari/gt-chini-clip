@@ -11,12 +11,6 @@ Class {
 }
 
 { #category : 'display mode' }
-ChineseWord class >> pronunciationLabel [
-	"I return the human-readable label for the pronunciation column."
-	self subclassResponsibility
-]
-
-{ #category : 'display mode' }
 ChineseWord class >> convertSelector [
 	"I return the selector to send to a token to convert it into my display mode."
 	self subclassResponsibility
@@ -31,6 +25,12 @@ ChineseWord class >> displayFont [
 { #category : 'display mode' }
 ChineseWord class >> isSimplified [
 	"I return whether I represent the simplified display mode."
+	self subclassResponsibility
+]
+
+{ #category : 'display mode' }
+ChineseWord class >> pronunciationLabel [
+	"I return the human-readable label for the pronunciation column."
 	self subclassResponsibility
 ]
 
@@ -51,6 +51,16 @@ ChineseWord class >> text: aString entries: aCollection dict: aDict [
 		yourself
 ]
 
+{ #category : 'conversion' }
+ChineseWord >> asSimplified [
+	self subclassResponsibility
+]
+
+{ #category : 'conversion' }
+ChineseWord >> asTraditional [
+	self subclassResponsibility
+]
+
 { #category : 'accessing' }
 ChineseWord >> bopomofo [
 	^ entries ifEmpty: [ '' ] ifNotEmpty: [ self preferredEntry bopomofo ]
@@ -62,6 +72,12 @@ ChineseWord >> breakdown [
 	text size <= 1 ifTrue: [ ^ #() ].
 	dict ifNil: [ ^ #() ].
 	^ (1 to: text size) collect: [ :i | self convertToMyMode: (dict word: (text at: i) asString) ]
+]
+
+{ #category : 'conversion' }
+ChineseWord >> convertToMyMode: aWord [
+	"I convert aWord into the same display mode as myself. TraditionalWord sends asTraditional, SimplifiedWord sends asSimplified. No type tests — pure dispatch."
+	self subclassResponsibility
 ]
 
 { #category : 'accessing' }
@@ -77,6 +93,12 @@ ChineseWord >> dict [
 { #category : 'accessing' }
 ChineseWord >> dict: aDict [
 	dict := aDict
+]
+
+{ #category : 'accessing' }
+ChineseWord >> displayTextOf: aCeDictEntry [
+	"I return tone-colored text from aCeDictEntry for my display mode. TraditionalWord returns toneColoredTraditional, SimplifiedWord returns toneColoredSimplified."
+	self subclassResponsibility
 ]
 
 { #category : 'accessing' }
@@ -166,6 +188,12 @@ ChineseWord >> isKnown [
 ]
 
 { #category : 'accessing' }
+ChineseWord >> knownPronunciation [
+	"I return the pronunciation string for a known word. TraditionalWord returns bopomofo, SimplifiedWord returns pinyin."
+	self subclassResponsibility
+]
+
+{ #category : 'accessing' }
 ChineseWord >> moedictEntry [
 	"I look up my canonical traditional form in MOEDICT, returning a MoedictEntry or nil. Lookup goes through preferredEntry so simplified-source words like 东西 still find the trad headword 東西."
 	entries ifEmpty: [ ^ nil ].
@@ -193,44 +221,16 @@ ChineseWord >> printOn: aStream [
 		aStream nextPutAll: ' ['; nextPutAll: self bopomofo; nextPut: $] ]
 ]
 
-{ #category : 'conversion' }
-ChineseWord >> asSimplified [
-	self subclassResponsibility
-]
-
-{ #category : 'conversion' }
-ChineseWord >> asTraditional [
-	self subclassResponsibility
-]
-
-{ #category : 'conversion' }
-ChineseWord >> convertToMyMode: aWord [
-	"I convert aWord into the same display mode as myself. TraditionalWord sends asTraditional, SimplifiedWord sends asSimplified. No type tests — pure dispatch."
-	self subclassResponsibility
-]
-
 { #category : 'accessing' }
-ChineseWord >> displayTextOf: aCeDictEntry [
-	"I return tone-colored text from aCeDictEntry for my display mode. TraditionalWord returns toneColoredTraditional, SimplifiedWord returns toneColoredSimplified."
-	self subclassResponsibility
+ChineseWord >> pronunciation [
+	"I return the mode-appropriate pronunciation for this word: bopomofo for traditional, pinyin for simplified. The raw accessors bopomofo and pinyin remain available for direct access."
+	^ entries ifEmpty: [ '' ] ifNotEmpty: [ self knownPronunciation ]
 ]
 
 { #category : 'accessing' }
 ChineseWord >> pronunciationOf: aCeDictEntry [
 	"I return the pronunciation string from aCeDictEntry appropriate for my display mode. TraditionalWord returns bopomofo, SimplifiedWord returns pinyin."
 	self subclassResponsibility
-]
-
-{ #category : 'accessing' }
-ChineseWord >> knownPronunciation [
-	"I return the pronunciation string for a known word. TraditionalWord returns bopomofo, SimplifiedWord returns pinyin."
-	self subclassResponsibility
-]
-
-{ #category : 'accessing' }
-ChineseWord >> pronunciation [
-	"I return the mode-appropriate pronunciation for this word: bopomofo for traditional, pinyin for simplified. The raw accessors bopomofo and pinyin remain available for direct access."
-	^ entries ifEmpty: [ '' ] ifNotEmpty: [ self knownPronunciation ]
 ]
 
 { #category : 'accessing' }

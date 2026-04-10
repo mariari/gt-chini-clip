@@ -1,30 +1,14 @@
 Class {
 	#name : 'SimplifiedWord',
 	#superclass : 'ChineseWord',
-	#instVars : [ ],
 	#category : 'GtChineseDict-Model',
 	#package : 'GtChineseDict',
 	#tag : 'Model'
 }
 
-{ #category : 'conversion' }
-SimplifiedWord >> asSimplified [
-	^ self
-]
-
-{ #category : 'conversion' }
-SimplifiedWord >> asTraditional [
-	^ TraditionalWord text: text entries: entries dict: dict
-]
-
 { #category : 'display mode' }
 SimplifiedWord class >> convertSelector [
 	^ #asSimplified
-]
-
-{ #category : 'display mode' }
-SimplifiedWord class >> pronunciationLabel [
-	^ 'Pinyin'
 ]
 
 { #category : 'display mode' }
@@ -35,6 +19,21 @@ SimplifiedWord class >> displayFont [
 { #category : 'display mode' }
 SimplifiedWord class >> isSimplified [
 	^ true
+]
+
+{ #category : 'display mode' }
+SimplifiedWord class >> pronunciationLabel [
+	^ 'Pinyin'
+]
+
+{ #category : 'conversion' }
+SimplifiedWord >> asSimplified [
+	^ self
+]
+
+{ #category : 'conversion' }
+SimplifiedWord >> asTraditional [
+	^ TraditionalWord text: text entries: entries dict: dict
 ]
 
 { #category : 'conversion' }
@@ -48,13 +47,13 @@ SimplifiedWord >> displayTextOf: aCeDictEntry [
 ]
 
 { #category : 'accessing' }
-SimplifiedWord >> pronunciationOf: aCeDictEntry [
-	^ aCeDictEntry pinyin
+SimplifiedWord >> knownPronunciation [
+	^ self preferredEntry pinyin
 ]
 
 { #category : 'accessing' }
-SimplifiedWord >> knownPronunciation [
-	^ self preferredEntry pinyin
+SimplifiedWord >> pronunciationOf: aCeDictEntry [
+	^ aCeDictEntry pinyin
 ]
 
 { #category : 'accessing' }

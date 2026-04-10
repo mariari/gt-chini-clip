@@ -25,11 +25,6 @@ ChineseClipboard class >> openWith: aString [
 	^ self new dict: (CustomDict named: aString)
 ]
 
-{ #category : 'accessing' }
-ChineseClipboard >> announcer [
-	^ announcer ifNil: [ announcer := Announcer new ]
-]
-
 { #category : 'private' }
 ChineseClipboard >> addBreakdownAffordanceTo: chip for: word charSize: charSize bopoSize: bopoSize select: selectWord chipsByWord: chipsByWord font: cjkFont [
 	"I add a toggle button and a hidden per-character breakdown row to chip. Sub-chips are built at a smaller charSize/bopoSize via buildChipFor:, and the toggle flips the container's visibility between gone and visible."
@@ -57,6 +52,24 @@ ChineseClipboard >> addBreakdownAffordanceTo: chip for: word charSize: charSize 
 				ifTrue: [ breakdownContainer visibility: BlVisibility visible ]
 				ifFalse: [ breakdownContainer visibility: BlVisibility gone ] ]).
 	chip addChild: breakdownContainer
+]
+
+{ #category : 'accessing' }
+ChineseClipboard >> announcer [
+	^ announcer ifNil: [ announcer := Announcer new ]
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildBlankRowCharSize: charSize [
+	"I build a visually empty row sized to one font line at charSize, used to render blank lines from the source text (the 2nd and later of consecutive newlines). An invisible space inside gives the flow a natural height from the same font metrics used for chip labels."
+	^ BrHorizontalFlow new
+		hMatchParent;
+		vFitContent;
+		addChild: (BlTextElement new
+			editorMeasurement;
+			text: ((' ' asRopedText fontName: self displayFont) fontSize: charSize);
+			yourself);
+		yourself
 ]
 
 { #category : 'private' }
@@ -189,39 +202,6 @@ ChineseClipboard >> buildDetailPaneOn: anAnnouncer [
 ]
 
 { #category : 'private' }
-ChineseClipboard >> buildReaderPane [
-	"I assemble the Reader view: chips area on top, detail strip in the middle, word list at the bottom. All three are wired through a shared announcer + dedup'd selectWord block."
-	| announcer current selectWord pane firstKnown |
-	announcer := Announcer new.
-	current := nil.
-	selectWord := [ :word |
-		current == word ifFalse: [
-			current := word.
-			announcer announce: (ChineseWordSelected word: word) ] ].
-	pane := BrVerticalPane new matchParent
-		addChild: (self buildChipsAreaSelect: selectWord on: announcer);
-		addChild: (self buildDetailPaneOn: announcer);
-		addChild: (self buildWordListSelect: selectWord on: announcer);
-		yourself.
-	firstKnown := words detect: #isKnown ifNone: [ nil ].
-	firstKnown ifNotNil: [ selectWord value: firstKnown ].
-	^ pane
-]
-
-{ #category : 'private' }
-ChineseClipboard >> buildBlankRowCharSize: charSize [
-	"I build a visually empty row sized to one font line at charSize, used to render blank lines from the source text (the 2nd and later of consecutive newlines). An invisible space inside gives the flow a natural height from the same font metrics used for chip labels."
-	^ BrHorizontalFlow new
-		hMatchParent;
-		vFitContent;
-		addChild: (BlTextElement new
-			editorMeasurement;
-			text: ((' ' asRopedText fontName: self displayFont) fontSize: charSize);
-			yourself);
-		yourself
-]
-
-{ #category : 'private' }
 ChineseClipboard >> buildLinesWithChipBuilder: chipBuilderBlock spacerCharSize: charSize [
 	"I build a vertical stack of horizontal-flow rows from my words: one row per source line, a blank row for each extra consecutive newline. Whitespace inside a line becomes a font-width spacer; every other token is built by chipBuilderBlock. The first newline after content ends the current row (no blank); each subsequent newline while currentFlow is already nil emits a blank row, preserving paragraph gaps from the source."
 	| container currentFlow |
@@ -244,6 +224,26 @@ ChineseClipboard >> buildLinesWithChipBuilder: chipBuilderBlock spacerCharSize: 
 					ifTrue: [ self spacerFor: word charSize: charSize ]
 					ifFalse: [ chipBuilderBlock value: word ]) ] ].
 	^ container
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildReaderPane [
+	"I assemble the Reader view: chips area on top, detail strip in the middle, word list at the bottom. All three are wired through a shared announcer + dedup'd selectWord block."
+	| announcer current selectWord pane firstKnown |
+	announcer := Announcer new.
+	current := nil.
+	selectWord := [ :word |
+		current == word ifFalse: [
+			current := word.
+			announcer announce: (ChineseWordSelected word: word) ] ].
+	pane := BrVerticalPane new matchParent
+		addChild: (self buildChipsAreaSelect: selectWord on: announcer);
+		addChild: (self buildDetailPaneOn: announcer);
+		addChild: (self buildWordListSelect: selectWord on: announcer);
+		yourself.
+	firstKnown := words detect: #isKnown ifNone: [ nil ].
+	firstKnown ifNotNil: [ selectWord value: firstKnown ].
+	^ pane
 ]
 
 { #category : 'private' }
@@ -280,6 +280,39 @@ ChineseClipboard >> buildSegmentedChipFor: word font: cjkFont [
 			aptitude: (BrGlamorousLabelAptitude new fontSize: 20);
 			text: ((word pronunciation asRopedText fontName: cjkFont) foreground: Color gray)) ].
 	^ chip
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildSimplifiedToggleWithSetter: setterBlock getter: getterBlock [
+	"I build a segmented 繁/简 pill toggle. The active choice gets a light blue background; clicking either side calls setterBlock with the new boolean. getterBlock returns the current mode for initial highlight. Used by both ChineseClipboard and ChineseClipboardHistory gtActions."
+	| cjkFont activeColor inactiveColor tradBtn simpBtn update makeBtn |
+	cjkFont := CeDictEntry simplifiedFontName.
+	activeColor := Color fromHexString: '#DBEAFE'.
+	inactiveColor := Color transparent.
+	makeBtn := [ :label |
+		BrButton new
+			aptitude: (BrGlamorousLabelAptitude new fontSize: 14);
+			label: (label asRopedText fontName: cjkFont);
+			geometry: (BlRoundedRectangleGeometry cornerRadius: 8);
+			padding: (BlInsets top: 0 bottom: 0 left: 5 right: 5);
+			yourself ].
+	tradBtn := makeBtn value: '繁'.
+	simpBtn := makeBtn value: '简'.
+	update := [ :isSimplified |
+		tradBtn background: (isSimplified ifTrue: [ inactiveColor ] ifFalse: [ activeColor ]).
+		simpBtn background: (isSimplified ifFalse: [ inactiveColor ] ifTrue: [ activeColor ]) ].
+	tradBtn action: [ setterBlock value: false. update value: false ].
+	simpBtn action: [ setterBlock value: true. update value: true ].
+	update value: getterBlock value == true.
+	^ BrButton new
+		layout: (BlLinearLayout horizontal alignCenter);
+		constraintsDo: [ :c | c horizontal fitContent. c vertical matchParent ];
+		padding: (BlInsets all: 0);
+		geometry: (BlRoundedRectangleGeometry cornerRadius: 7);
+		background: (Color fromHexString: '#F0F0F0');
+		addChild: tradBtn;
+		addChild: simpBtn;
+		yourself
 ]
 
 { #category : 'private' }
@@ -347,25 +380,6 @@ ChineseClipboard >> containsChinese: aString [
 	^ aString anySatisfy: [ :c | CeDict isCJK: c ]
 ]
 
-{ #category : 'display mode' }
-ChineseClipboard >> displayFont [
-	"I return the CJK font name for the current display mode, delegating to the wordClass (TraditionalWord or SimplifiedWord)."
-	^ (wordClass ifNil: [ TraditionalWord ]) displayFont
-]
-
-{ #category : 'display mode' }
-ChineseClipboard >> switchToWordClass: aClass [
-	"I switch the display mode by converting all existing words to the new class and re-announcing. processText: will also use the new class for future segmentations."
-	wordClass := aClass.
-	words ifNotNil: [ words := words collect: aClass convertSelector ].
-	self announcer announce: ValueChanged new
-]
-
-{ #category : 'display mode' }
-ChineseClipboard >> wordClass [
-	^ wordClass ifNil: [ TraditionalWord ]
-]
-
 { #category : 'accessing' }
 ChineseClipboard >> dict [
 	^ dict
@@ -374,6 +388,12 @@ ChineseClipboard >> dict [
 { #category : 'accessing' }
 ChineseClipboard >> dict: aCeDict [
 	dict := aCeDict
+]
+
+{ #category : 'display mode' }
+ChineseClipboard >> displayFont [
+	"I return the CJK font name for the current display mode, delegating to the wordClass (TraditionalWord or SimplifiedWord)."
+	^ (wordClass ifNil: [ TraditionalWord ]) displayFont
 ]
 
 { #category : 'gt-actions' }
@@ -397,39 +417,6 @@ ChineseClipboard >> gtActionSimplifiedFor: anAction [
 						ifTrue: [ SimplifiedWord ]
 						ifFalse: [ TraditionalWord ]) ]
 				getter: [ self wordClass isSimplified ] ]
-]
-
-{ #category : 'private' }
-ChineseClipboard >> buildSimplifiedToggleWithSetter: setterBlock getter: getterBlock [
-	"I build a segmented 繁/简 pill toggle. The active choice gets a light blue background; clicking either side calls setterBlock with the new boolean. getterBlock returns the current mode for initial highlight. Used by both ChineseClipboard and ChineseClipboardHistory gtActions."
-	| cjkFont activeColor inactiveColor tradBtn simpBtn update makeBtn |
-	cjkFont := CeDictEntry simplifiedFontName.
-	activeColor := Color fromHexString: '#DBEAFE'.
-	inactiveColor := Color transparent.
-	makeBtn := [ :label |
-		BrButton new
-			aptitude: (BrGlamorousLabelAptitude new fontSize: 14);
-			label: (label asRopedText fontName: cjkFont);
-			geometry: (BlRoundedRectangleGeometry cornerRadius: 8);
-			padding: (BlInsets top: 0 bottom: 0 left: 5 right: 5);
-			yourself ].
-	tradBtn := makeBtn value: '繁'.
-	simpBtn := makeBtn value: '简'.
-	update := [ :isSimplified |
-		tradBtn background: (isSimplified ifTrue: [ inactiveColor ] ifFalse: [ activeColor ]).
-		simpBtn background: (isSimplified ifFalse: [ inactiveColor ] ifTrue: [ activeColor ]) ].
-	tradBtn action: [ setterBlock value: false. update value: false ].
-	simpBtn action: [ setterBlock value: true. update value: true ].
-	update value: getterBlock value == true.
-	^ BrButton new
-		layout: (BlLinearLayout horizontal alignCenter);
-		constraintsDo: [ :c | c horizontal fitContent. c vertical matchParent ];
-		padding: (BlInsets all: 0);
-		geometry: (BlRoundedRectangleGeometry cornerRadius: 7);
-		background: (Color fromHexString: '#F0F0F0');
-		addChild: tradBtn;
-		addChild: simpBtn;
-		yourself
 ]
 
 { #category : 'gt-views' }
@@ -552,18 +539,6 @@ ChineseClipboard >> spacerFor: word charSize: charSize [
 		yourself
 ]
 
-{ #category : 'private' }
-ChineseClipboard >> wireSelectionHighlightFor: chipsByWord on: anAnnouncer [
-	"I subscribe to ChineseWordSelected on anAnnouncer: when a word is selected, I clear all chip backgrounds in chipsByWord, then paint the selected word's chip and scroll it into view. The subscription is tied to self via the `for: self` argument, so it dies when the clipboard is garbage-collected."
-	| highlightColor |
-	highlightColor := (Color fromHexString: '#FFEB3B') alpha: 0.3.
-	anAnnouncer when: ChineseWordSelected do: [ :evt |
-		chipsByWord valuesDo: [ :c | c background: Color transparent ].
-		(chipsByWord at: evt word ifAbsent: [ nil ]) ifNotNil: [ :c |
-			c background: highlightColor.
-			self scrollIntoView: c ] ] for: self
-]
-
 { #category : 'actions' }
 ChineseClipboard >> startPolling [
 	"I start polling the clipboard every second. Process auto-terminates on GC."
@@ -582,6 +557,31 @@ ChineseClipboard >> stopPolling [
 	pollingProcess ifNotNil: [ :p |
 		p terminate.
 		pollingProcess := nil ]
+]
+
+{ #category : 'display mode' }
+ChineseClipboard >> switchToWordClass: aClass [
+	"I switch the display mode by converting all existing words to the new class and re-announcing. processText: will also use the new class for future segmentations."
+	wordClass := aClass.
+	words ifNotNil: [ words := words collect: aClass convertSelector ].
+	self announcer announce: ValueChanged new
+]
+
+{ #category : 'private' }
+ChineseClipboard >> wireSelectionHighlightFor: chipsByWord on: anAnnouncer [
+	"I subscribe to ChineseWordSelected on anAnnouncer: when a word is selected, I clear all chip backgrounds in chipsByWord, then paint the selected word's chip and scroll it into view. The subscription is tied to self via the `for: self` argument, so it dies when the clipboard is garbage-collected."
+	| highlightColor |
+	highlightColor := (Color fromHexString: '#FFEB3B') alpha: 0.3.
+	anAnnouncer when: ChineseWordSelected do: [ :evt |
+		chipsByWord valuesDo: [ :c | c background: Color transparent ].
+		(chipsByWord at: evt word ifAbsent: [ nil ]) ifNotNil: [ :c |
+			c background: highlightColor.
+			self scrollIntoView: c ] ] for: self
+]
+
+{ #category : 'display mode' }
+ChineseClipboard >> wordClass [
+	^ wordClass ifNil: [ TraditionalWord ]
 ]
 
 { #category : 'accessing' }

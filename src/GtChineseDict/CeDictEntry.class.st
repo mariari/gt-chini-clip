@@ -27,17 +27,6 @@ CeDictEntry class >> cjkFontName [
 	^ CjkFont
 ]
 
-{ #category : 'accessing' }
-CeDictEntry class >> simplifiedFontName [
-	"I return the font name for simplified Chinese display. Prefers Source Han Sans SC, falls back to Source Han Sans CN, then to Noto Sans CJK SC."
-	SimplifiedFont ifNotNil: [ ^ SimplifiedFont ].
-	(SkiaFontManager default familyNames includes: 'Source Han Sans SC')
-		ifTrue: [ ^ SimplifiedFont := 'Source Han Sans SC' ].
-	(SkiaFontManager default familyNames includes: 'Source Han Sans CN')
-		ifTrue: [ ^ SimplifiedFont := 'Source Han Sans CN' ].
-	^ SimplifiedFont := 'Noto Sans CJK SC'
-]
-
 { #category : 'instance creation' }
 CeDictEntry class >> fromLine: aString [
 	"I parse a CC-CEDICT line: Traditional Simplified [pin1 yin1] /def1/def2/"
@@ -55,6 +44,17 @@ CeDictEntry class >> fromLine: aString [
 		simplified: simp;
 		pinyin: pinyin;
 		definitions: defs
+]
+
+{ #category : 'accessing' }
+CeDictEntry class >> simplifiedFontName [
+	"I return the font name for simplified Chinese display. Prefers Source Han Sans SC, falls back to Source Han Sans CN, then to Noto Sans CJK SC."
+	SimplifiedFont ifNotNil: [ ^ SimplifiedFont ].
+	(SkiaFontManager default familyNames includes: 'Source Han Sans SC')
+		ifTrue: [ ^ SimplifiedFont := 'Source Han Sans SC' ].
+	(SkiaFontManager default familyNames includes: 'Source Han Sans CN')
+		ifTrue: [ ^ SimplifiedFont := 'Source Han Sans CN' ].
+	^ SimplifiedFont := 'Noto Sans CJK SC'
 ]
 
 { #category : 'accessing' }

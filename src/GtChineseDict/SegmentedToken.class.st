@@ -28,6 +28,18 @@ SegmentedToken class >> text: aString [
 		yourself
 ]
 
+{ #category : 'conversion' }
+SegmentedToken >> asSimplified [
+	"Non-Chinese tokens are mode-agnostic; they return self."
+	^ self
+]
+
+{ #category : 'conversion' }
+SegmentedToken >> asTraditional [
+	"Non-Chinese tokens are mode-agnostic; they return self."
+	^ self
+]
+
 { #category : 'accessing' }
 SegmentedToken >> definition [
 	"I return a human-readable gloss for this token, or the empty string for tokens that have no dictionary backing. Subclasses override."
@@ -69,18 +81,6 @@ SegmentedToken >> text [
 { #category : 'accessing' }
 SegmentedToken >> text: aString [
 	text := aString
-]
-
-{ #category : 'conversion' }
-SegmentedToken >> asSimplified [
-	"Non-Chinese tokens are mode-agnostic; they return self."
-	^ self
-]
-
-{ #category : 'conversion' }
-SegmentedToken >> asTraditional [
-	"Non-Chinese tokens are mode-agnostic; they return self."
-	^ self
 ]
 
 { #category : 'accessing' }

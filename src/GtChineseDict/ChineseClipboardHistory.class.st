@@ -5,8 +5,9 @@ Class {
 		'clipboard',
 		'entries'
 	],
-	#category : 'GtChineseDict',
-	#package : 'GtChineseDict'
+	#category : 'GtChineseDict-Tool',
+	#package : 'GtChineseDict',
+	#tag : 'Tool'
 }
 
 { #category : 'instance creation' }

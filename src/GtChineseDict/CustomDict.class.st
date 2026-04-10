@@ -61,6 +61,25 @@ CustomDict >> baseDict: aDict [
 	baseDict := aDict
 ]
 
+{ #category : 'segmentation' }
+CustomDict >> cjkTokenAt: pos in: aString [
+	"I prefer my own entries: take the longest custom match starting here. Only fall back to a base-dict match if no custom match starts here, and only if the base match wouldn't shadow a custom entry that begins later in the lookahead window. Overrides CeDict>>cjkTokenAt:in: to preserve the lookahead-respecting behavior that CustomDict had prior to the segmenter dispatch refactor."
+	| ownMax endCap |
+	ownMax := self ownLongestMatchAt: pos in: aString.
+	ownMax ifNotNil: [ ^ ownMax ].
+	endCap := self firstOwnStartAfter: pos in: aString.
+	self maxWordLength to: 1 by: -1 do: [ :len |
+		| end |
+		end := pos + len - 1.
+		(end <= aString size and: [ endCap isNil or: [ end < endCap ] ]) ifTrue: [
+			| candidate matches |
+			candidate := aString copyFrom: pos to: end.
+			matches := baseDict ifNil: [ #() ] ifNotNil: [ baseDict lookup: candidate ].
+			matches ifNotEmpty: [
+				^ TraditionalWord text: candidate entries: matches dict: self ] ] ].
+	^ TraditionalWord text: (aString at: pos) asString entries: #() dict: self
+]
+
 { #category : 'accessing' }
 CustomDict >> file [
 	"I return the path to my custom file."
@@ -108,25 +127,6 @@ CustomDict >> loadEntries [
 			line := stream nextLine.
 			(line isNotEmpty and: [ line first ~= $# ])
 				ifTrue: [ self addEntry: (CeDictEntry fromLine: line) ] ] ]
-]
-
-{ #category : 'segmentation' }
-CustomDict >> cjkTokenAt: pos in: aString [
-	"I prefer my own entries: take the longest custom match starting here. Only fall back to a base-dict match if no custom match starts here, and only if the base match wouldn't shadow a custom entry that begins later in the lookahead window. Overrides CeDict>>cjkTokenAt:in: to preserve the lookahead-respecting behavior that CustomDict had prior to the segmenter dispatch refactor."
-	| ownMax endCap |
-	ownMax := self ownLongestMatchAt: pos in: aString.
-	ownMax ifNotNil: [ ^ ownMax ].
-	endCap := self firstOwnStartAfter: pos in: aString.
-	self maxWordLength to: 1 by: -1 do: [ :len |
-		| end |
-		end := pos + len - 1.
-		(end <= aString size and: [ endCap isNil or: [ end < endCap ] ]) ifTrue: [
-			| candidate matches |
-			candidate := aString copyFrom: pos to: end.
-			matches := baseDict ifNil: [ #() ] ifNotNil: [ baseDict lookup: candidate ].
-			matches ifNotEmpty: [
-				^ TraditionalWord text: candidate entries: matches dict: self ] ] ].
-	^ TraditionalWord text: (aString at: pos) asString entries: #() dict: self
 ]
 
 { #category : 'accessing' }
