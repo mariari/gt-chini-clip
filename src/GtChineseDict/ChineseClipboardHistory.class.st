@@ -57,6 +57,20 @@ ChineseClipboardHistory >> gtActionPollingFor: anAction [
 		deactivatedAction: [ :aToggle | self stopPolling ]
 ]
 
+{ #category : 'gt-actions' }
+ChineseClipboardHistory >> gtActionSimplifiedFor: anAction [
+	<gtAction>
+	^ anAction toggle
+		icon: BrGlamorousVectorIcons changes;
+		label: '简/繁';
+		activatedAction: [ :aToggle |
+			clipboard simplified: true.
+			clipboard announcer announce: ValueChanged new ];
+		deactivatedAction: [ :aToggle |
+			clipboard simplified: false.
+			clipboard announcer announce: ValueChanged new ]
+]
+
 { #category : 'gt-views' }
 ChineseClipboardHistory >> gtCurrentFor: aView [
 	<gtView>

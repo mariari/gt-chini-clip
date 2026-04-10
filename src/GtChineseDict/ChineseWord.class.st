@@ -149,6 +149,12 @@ ChineseWord >> moedictEntry [
 ]
 
 { #category : 'accessing' }
+ChineseWord >> pinyin [
+	"I return the preferred entry's raw pinyin (space-separated numbered syllables like 'ni3 hao3'), or empty string if I have no entries."
+	^ entries ifEmpty: [ '' ] ifNotEmpty: [ self preferredEntry pinyin ]
+]
+
+{ #category : 'accessing' }
 ChineseWord >> preferredEntry [
 	"I prefer entries whose first definition isn't a 'variant of' pointer. CC-CEDICT marks alt-form entries this way (e.g. 着 trad=着 is 'variant of 著', and 吃 trad=喫 is 'variant of 吃'); the other entry is the canonical one. Falls back to my first entry when none of them are variants."
 	^ entries
@@ -161,6 +167,13 @@ ChineseWord >> printOn: aStream [
 	aStream nextPutAll: text.
 	entries ifNotEmpty: [
 		aStream nextPutAll: ' ['; nextPutAll: self bopomofo; nextPut: $] ]
+]
+
+{ #category : 'accessing' }
+ChineseWord >> toneColoredSimplifiedText [
+	"I return my simplified text as RopedText with each character colored by its pinyin tone."
+	entries ifEmpty: [ ^ text asRopedText ].
+	^ self preferredEntry toneColoredSimplified
 ]
 
 { #category : 'accessing' }

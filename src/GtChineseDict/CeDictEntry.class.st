@@ -8,7 +8,8 @@ Class {
 		'definitions'
 	],
 	#classVars : [
-		'CjkFont'
+		'CjkFont',
+		'SimplifiedFont'
 	],
 	#category : 'GtChineseDict-Model',
 	#package : 'GtChineseDict',
@@ -24,6 +25,17 @@ CeDictEntry class >> cjkFontName [
 		ifTrue: [ 'DFPYuanW7-ZhuIn' ]
 		ifFalse: [ 'Source Han Sans TW' ].
 	^ CjkFont
+]
+
+{ #category : 'accessing' }
+CeDictEntry class >> simplifiedFontName [
+	"I return the font name for simplified Chinese display. Prefers Source Han Sans SC, falls back to Source Han Sans CN, then to Noto Sans CJK SC."
+	SimplifiedFont ifNotNil: [ ^ SimplifiedFont ].
+	(SkiaFontManager default familyNames includes: 'Source Han Sans SC')
+		ifTrue: [ ^ SimplifiedFont := 'Source Han Sans SC' ].
+	(SkiaFontManager default familyNames includes: 'Source Han Sans CN')
+		ifTrue: [ ^ SimplifiedFont := 'Source Han Sans CN' ].
+	^ SimplifiedFont := 'Noto Sans CJK SC'
 ]
 
 { #category : 'instance creation' }
@@ -136,13 +148,25 @@ CeDictEntry >> simplified: aString [
 ]
 
 { #category : 'accessing' }
-CeDictEntry >> toneColoredTraditional [
-	"I return traditional text as RopedText with per-character tone coloring."
+CeDictEntry >> toneColored: aString [
+	"I return aString as RopedText with each character colored by its pinyin tone."
 	| syllables |
 	syllables := Character space split: pinyin.
-	^ (1 to: traditional size) inject: '' asRopedText into: [ :acc :i |
-		acc , ((traditional at: i) asString asRopedText
+	^ (1 to: aString size) inject: '' asRopedText into: [ :acc :i |
+		acc , ((aString at: i) asString asRopedText
 			foreground: (ChineseToneColor colorForPinyin: (syllables at: i ifAbsent: [ '' ]))) ]
+]
+
+{ #category : 'accessing' }
+CeDictEntry >> toneColoredSimplified [
+	"I return simplified text as RopedText with per-character tone coloring."
+	^ self toneColored: simplified
+]
+
+{ #category : 'accessing' }
+CeDictEntry >> toneColoredTraditional [
+	"I return traditional text as RopedText with per-character tone coloring."
+	^ self toneColored: traditional
 ]
 
 { #category : 'accessing' }

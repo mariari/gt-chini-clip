@@ -5,6 +5,7 @@ Class {
 		'dict',
 		'lastText',
 		'words',
+		'simplified',
 		'pollingProcess',
 		'announcer'
 	],
@@ -102,13 +103,13 @@ ChineseClipboard >> buildChipMainBlockFor: word charSize: charSize bopoSize: bop
 		yourself.
 	mainBlock addChild: (BrLabel new
 		aptitude: (BrGlamorousLabelAptitude new fontSize: charSize);
-		text: (word toneColoredText fontName: cjkFont)).
+		text: ((self displayTextFor: word) fontName: cjkFont)).
 	word isKnown ifTrue: [
 		mainBlock
 			addAptitude: word tooltipAptitude;
 			addChild: (BrLabel new
 				aptitude: (BrGlamorousLabelAptitude new fontSize: bopoSize);
-				text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
+				text: (((self pronunciationFor: word) asRopedText fontName: cjkFont) foreground: Color gray)) ].
 	^ mainBlock
 ]
 
@@ -144,7 +145,7 @@ ChineseClipboard >> buildChipsAreaSelect: selectWord on: anAnnouncer [
 { #category : 'private' }
 ChineseClipboard >> buildDetailPaneOn: anAnnouncer [
 	| pane cjkFont |
-	cjkFont := CeDictEntry cjkFontName.
+	cjkFont := self displayFont.
 	pane := BrHorizontalPane new
 			hMatchParent;
 			vFitContent;
@@ -161,7 +162,7 @@ ChineseClipboard >> buildDetailPaneOn: anAnnouncer [
 			pane
 				addChild: (BrLabel new
 						aptitude: (BrGlamorousLabelAptitude new fontSize: 36);
-						text: (word toneColoredText fontName: cjkFont)).
+						text: ((self displayTextFor: word) fontName: cjkFont)).
 			word isKnown
 				ifTrue: [  "POS badge from MOEDICT, hover for English name"word moedictEntry
 						ifNotNil: [ :e | 
@@ -215,7 +216,7 @@ ChineseClipboard >> buildBlankRowCharSize: charSize [
 		vFitContent;
 		addChild: (BlTextElement new
 			editorMeasurement;
-			text: ((' ' asRopedText fontName: CeDictEntry cjkFontName) fontSize: charSize);
+			text: ((' ' asRopedText fontName: self displayFont) fontSize: charSize);
 			yourself);
 		yourself
 ]
@@ -273,11 +274,11 @@ ChineseClipboard >> buildSegmentedChipFor: word font: cjkFont [
 				text: word definition ]) ].
 	chip addChild: (BrLabel new
 		aptitude: (BrGlamorousLabelAptitude new fontSize: 50);
-		text: (word toneColoredText fontName: cjkFont)).
+		text: ((self displayTextFor: word) fontName: cjkFont)).
 	word isKnown ifTrue: [
 		chip addChild: (BrLabel new
 			aptitude: (BrGlamorousLabelAptitude new fontSize: 20);
-			text: ((word bopomofo asRopedText fontName: cjkFont) foreground: Color gray)) ].
+			text: (((self pronunciationFor: word) asRopedText fontName: cjkFont) foreground: Color gray)) ].
 	^ chip
 ]
 
@@ -285,7 +286,7 @@ ChineseClipboard >> buildSegmentedChipFor: word font: cjkFont [
 ChineseClipboard >> buildWordChipsCharSize: charSize bopoSize: bopoSize select: selectWord on: anAnnouncer [
 	"I build the reader's chips area as a vertical stack of per-line horizontal flows via buildLinesWithChipBuilder:, passing my per-word chip factory as the block. After building, I wire the ChineseWordSelected announcer to highlight and scroll the chip for the currently-selected word."
 	| chipsByWord cjkFont container |
-	cjkFont := CeDictEntry cjkFontName.
+	cjkFont := self displayFont.
 	chipsByWord := IdentityDictionary new.
 	container := self
 		buildLinesWithChipBuilder: [ :word |
@@ -304,15 +305,15 @@ ChineseClipboard >> buildWordChipsCharSize: charSize bopoSize: bopoSize select: 
 { #category : 'private' }
 ChineseClipboard >> buildWordListSelect: selectWord on: anAnnouncer [
 	| list cjkFont labelStencil |
-	cjkFont := CeDictEntry cjkFontName.
+	cjkFont := self displayFont.
 	labelStencil := [ :textBlock |
 		[ :w :col | BrLabel new aptitude: BrGlamorousLabelAptitude new; text: (textBlock value: w) ] ].
 	list := BrColumnedList new matchParent.
 	list rowStencil: BrGlamorousColumnedListSelectableRowElementStencilBuilder new.
 	(list column title: 'Word'; width: 120) stencil: (labelStencil value: [ :w |
-		(w toneColoredText fontName: cjkFont) fontSize: 20 ]).
+		((self displayTextFor: w) fontName: cjkFont) fontSize: 20 ]).
 	(list column title: 'BoPoMoFo'; width: 120) stencil: (labelStencil value: [ :w |
-		(w bopomofo asRopedText fontName: cjkFont) fontSize: 12 ]).
+		((self pronunciationFor: w) asRopedText fontName: cjkFont) fontSize: 12 ]).
 	(list column title: 'Definition') stencil: (labelStencil value: [ :w | w definition ]).
 	list items: (words select: #isKnown).
 	list when: BrSelectionDoubleClicked do: [ :evt |
@@ -346,6 +347,40 @@ ChineseClipboard >> containsChinese: aString [
 	^ aString anySatisfy: [ :c | CeDict isCJK: c ]
 ]
 
+{ #category : 'display mode' }
+ChineseClipboard >> displayFont [
+	"I return the CJK font name appropriate for the current display mode."
+	^ simplified == true
+		ifTrue: [ CeDictEntry simplifiedFontName ]
+		ifFalse: [ CeDictEntry cjkFontName ]
+]
+
+{ #category : 'display mode' }
+ChineseClipboard >> displayTextFor: word [
+	"I return tone-colored RopedText for word in the current display mode: simplified characters when simplified is true, traditional otherwise."
+	^ simplified == true
+		ifTrue: [ word toneColoredSimplifiedText ]
+		ifFalse: [ word toneColoredText ]
+]
+
+{ #category : 'display mode' }
+ChineseClipboard >> pronunciationFor: word [
+	"I return the pronunciation string for word in the current display mode: pinyin when simplified is true, bopomofo otherwise."
+	^ simplified == true
+		ifTrue: [ word pinyin ]
+		ifFalse: [ word bopomofo ]
+]
+
+{ #category : 'display mode' }
+ChineseClipboard >> simplified [
+	^ simplified
+]
+
+{ #category : 'display mode' }
+ChineseClipboard >> simplified: aBoolean [
+	simplified := aBoolean
+]
+
 { #category : 'accessing' }
 ChineseClipboard >> dict [
 	^ dict
@@ -364,6 +399,20 @@ ChineseClipboard >> gtActionPollingFor: anAction [
 		label: 'Watch clipboard';
 		activatedAction: [ :aToggle | self startPolling ];
 		deactivatedAction: [ :aToggle | self stopPolling ]
+]
+
+{ #category : 'gt-actions' }
+ChineseClipboard >> gtActionSimplifiedFor: anAction [
+	<gtAction>
+	^ anAction toggle
+		icon: BrGlamorousVectorIcons changes;
+		label: '简/繁';
+		activatedAction: [ :aToggle |
+			simplified := true.
+			self announcer announce: ValueChanged new ];
+		deactivatedAction: [ :aToggle |
+			simplified := false.
+			self announcer announce: ValueChanged new ]
 ]
 
 { #category : 'gt-views' }
@@ -393,7 +442,7 @@ ChineseClipboard >> gtSegmentedFor: aView [
 	"See gtReaderFor: — the nil-words check lives inside the stencil so the view-constructor is unconditional and its updateWhen: subscription is installed even on the first empty-clipboard evaluation."
 	<gtView>
 	| cjkFont |
-	cjkFont := CeDictEntry cjkFontName.
+	cjkFont := self displayFont.
 	^ aView explicit
 		title: 'Words';
 		priority: 1;
@@ -413,16 +462,16 @@ ChineseClipboard >> gtWordListFor: aView [
 	"See gtReaderFor: — the nil-words check lives inside the items: block so the view-constructor is unconditional and its updateWhen: subscription is installed even on the first empty-clipboard evaluation."
 	<gtView>
 	| cjkFont |
-	cjkFont := CeDictEntry cjkFontName.
+	cjkFont := self displayFont.
 	^ aView columnedList
 		title: 'Word list';
 		priority: 5;
 		updateWhen: ValueChanged in: [ self announcer ];
 		items: [ words ifNil: [ #() ] ifNotNil: [ words select: #isKnown ] ];
 		column: 'Word' text: [ :w |
-			(w toneColoredText fontName: cjkFont) fontSize: 20 ] width: 120;
+			((self displayTextFor: w) fontName: cjkFont) fontSize: 20 ] width: 120;
 		column: 'BoPoMoFo' text: [ :w |
-			(w bopomofo asRopedText fontName: cjkFont) fontSize: 14 ] width: 120;
+			((self pronunciationFor: w) asRopedText fontName: cjkFont) fontSize: 14 ] width: 120;
 		column: 'Definition' text: [ :w | w definition ]
 ]
 
@@ -482,7 +531,7 @@ ChineseClipboard >> spacerFor: word charSize: charSize [
 	"I render a whitespace token as a BlTextElement at the same font and size as chip labels. `editorMeasurement` swaps in the advance-based measurement strategy that Bloc's code editors use, so the element's extent reflects the font's actual glyph advance — even for boundary whitespace, where the default label measurement strategy returns 0."
 	^ BlTextElement new
 		editorMeasurement;
-		text: ((word text asRopedText fontName: CeDictEntry cjkFontName) fontSize: charSize);
+		text: ((word text asRopedText fontName: self displayFont) fontSize: charSize);
 		yourself
 ]
 
