@@ -60,15 +60,13 @@ ChineseClipboardHistory >> gtActionPollingFor: anAction [
 { #category : 'gt-actions' }
 ChineseClipboardHistory >> gtActionSimplifiedFor: anAction [
 	<gtAction>
-	^ anAction toggle
-		icon: BrGlamorousVectorIcons changes;
-		label: '简/繁';
-		activatedAction: [ :aToggle |
-			clipboard simplified: true.
-			clipboard announcer announce: ValueChanged new ];
-		deactivatedAction: [ :aToggle |
-			clipboard simplified: false.
-			clipboard announcer announce: ValueChanged new ]
+	^ anAction explicit
+		stencil: [
+			clipboard
+				buildSimplifiedToggleWithSetter: [ :v |
+					clipboard simplified: v.
+					clipboard announcer announce: ValueChanged new ]
+				getter: [ clipboard simplified ] ]
 ]
 
 { #category : 'gt-views' }

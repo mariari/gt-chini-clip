@@ -404,15 +404,46 @@ ChineseClipboard >> gtActionPollingFor: anAction [
 { #category : 'gt-actions' }
 ChineseClipboard >> gtActionSimplifiedFor: anAction [
 	<gtAction>
-	^ anAction toggle
-		icon: BrGlamorousVectorIcons changes;
-		label: '简/繁';
-		activatedAction: [ :aToggle |
-			simplified := true.
-			self announcer announce: ValueChanged new ];
-		deactivatedAction: [ :aToggle |
-			simplified := false.
-			self announcer announce: ValueChanged new ]
+	^ anAction explicit
+		stencil: [
+			self
+				buildSimplifiedToggleWithSetter: [ :v |
+					simplified := v.
+					self announcer announce: ValueChanged new ]
+				getter: [ simplified ] ]
+]
+
+{ #category : 'private' }
+ChineseClipboard >> buildSimplifiedToggleWithSetter: setterBlock getter: getterBlock [
+	"I build a segmented 繁/简 pill toggle. The active choice gets a light blue background; clicking either side calls setterBlock with the new boolean. getterBlock returns the current mode for initial highlight. Used by both ChineseClipboard and ChineseClipboardHistory gtActions."
+	| cjkFont activeColor inactiveColor tradBtn simpBtn update makeBtn |
+	cjkFont := CeDictEntry simplifiedFontName.
+	activeColor := Color fromHexString: '#DBEAFE'.
+	inactiveColor := Color transparent.
+	makeBtn := [ :label |
+		BrButton new
+			aptitude: (BrGlamorousLabelAptitude new fontSize: 14);
+			label: (label asRopedText fontName: cjkFont);
+			geometry: (BlRoundedRectangleGeometry cornerRadius: 8);
+			padding: (BlInsets top: 0 bottom: 0 left: 5 right: 5);
+			yourself ].
+	tradBtn := makeBtn value: '繁'.
+	simpBtn := makeBtn value: '简'.
+	update := [ :isSimplified |
+		tradBtn background: (isSimplified ifTrue: [ inactiveColor ] ifFalse: [ activeColor ]).
+		simpBtn background: (isSimplified ifFalse: [ inactiveColor ] ifTrue: [ activeColor ]) ].
+	tradBtn action: [ setterBlock value: false. update value: false ].
+	simpBtn action: [ setterBlock value: true. update value: true ].
+	update value: getterBlock value == true.
+	^ BrButton new
+		layout: (BlLinearLayout horizontal alignCenter);
+		constraintsDo: [ :c | c horizontal fitContent. c vertical matchParent ];
+		padding: (BlInsets all: 0);
+		geometry: (BlRoundedRectangleGeometry cornerRadius: 7);
+		background: (Color fromHexString: '#F0F0F0');
+		addChild: tradBtn;
+		addChild: simpBtn;
+		yourself
 ]
 
 { #category : 'gt-views' }
