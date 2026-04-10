@@ -63,10 +63,11 @@ ChineseClipboardHistory >> gtActionSimplifiedFor: anAction [
 	^ anAction explicit
 		stencil: [
 			clipboard
-				buildSimplifiedToggleWithSetter: [ :v |
-					clipboard simplified: v.
-					clipboard announcer announce: ValueChanged new ]
-				getter: [ clipboard simplified ] ]
+				buildSimplifiedToggleWithSetter: [ :isSimplified |
+					clipboard switchToWordClass: (isSimplified
+						ifTrue: [ SimplifiedWord ]
+						ifFalse: [ TraditionalWord ]) ]
+				getter: [ clipboard wordClass isSimplified ] ]
 ]
 
 { #category : 'gt-views' }
@@ -83,7 +84,7 @@ ChineseClipboardHistory >> gtCurrentFor: aView [
 ChineseClipboardHistory >> gtHistoryFor: aView [
 	<gtView>
 	| cjkFont |
-	cjkFont := CeDictEntry cjkFontName.
+	cjkFont := clipboard displayFont.
 	^ aView columnedList
 		title: 'History';
 		priority: 5;
@@ -91,7 +92,7 @@ ChineseClipboardHistory >> gtHistoryFor: aView [
 		items: [ entries reversed ];
 		column: 'Text' text: [ :text |
 			| words colored |
-			words := clipboard dict segment: text.
+			words := (clipboard dict segment: text) collect: clipboard wordClass convertSelector.
 			colored := '' asRopedText.
 			words do: [ :w | colored := colored , (w toneColoredText fontName: cjkFont) ].
 			colored fontSize: 16 ];

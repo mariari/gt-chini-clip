@@ -136,8 +136,8 @@ CeDict >> cjkTokenAt: pos in: aString [
 			candidate := aString copyFrom: pos to: end.
 			matches := self lookup: candidate.
 			matches ifNotEmpty: [
-				^ ChineseWord text: candidate entries: matches dict: self ] ] ].
-	^ ChineseWord text: (aString at: pos) asString entries: #() dict: self
+				^ TraditionalWord text: candidate entries: matches dict: self ] ] ].
+	^ TraditionalWord text: (aString at: pos) asString entries: #() dict: self
 ]
 
 { #category : 'segmentation' }
@@ -249,5 +249,5 @@ CeDict >> size [
 { #category : 'accessing' }
 CeDict >> word: aString [
 	"I return a ChineseWord for a string."
-	^ ChineseWord text: aString entries: (self lookup: aString) dict: self
+	^ TraditionalWord text: aString entries: (self lookup: aString) dict: self
 ]

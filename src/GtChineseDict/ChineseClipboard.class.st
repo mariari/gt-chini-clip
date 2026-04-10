@@ -5,7 +5,7 @@ Class {
 		'dict',
 		'lastText',
 		'words',
-		'simplified',
+		'wordClass',
 		'pollingProcess',
 		'announcer'
 	],
@@ -103,13 +103,13 @@ ChineseClipboard >> buildChipMainBlockFor: word charSize: charSize bopoSize: bop
 		yourself.
 	mainBlock addChild: (BrLabel new
 		aptitude: (BrGlamorousLabelAptitude new fontSize: charSize);
-		text: ((self displayTextFor: word) fontName: cjkFont)).
+		text: (word toneColoredText fontName: cjkFont)).
 	word isKnown ifTrue: [
 		mainBlock
 			addAptitude: word tooltipAptitude;
 			addChild: (BrLabel new
 				aptitude: (BrGlamorousLabelAptitude new fontSize: bopoSize);
-				text: (((self pronunciationFor: word) asRopedText fontName: cjkFont) foreground: Color gray)) ].
+				text: ((word pronunciation asRopedText fontName: cjkFont) foreground: Color gray)) ].
 	^ mainBlock
 ]
 
@@ -162,7 +162,7 @@ ChineseClipboard >> buildDetailPaneOn: anAnnouncer [
 			pane
 				addChild: (BrLabel new
 						aptitude: (BrGlamorousLabelAptitude new fontSize: 36);
-						text: ((self displayTextFor: word) fontName: cjkFont)).
+						text: (word toneColoredText fontName: cjkFont)).
 			word isKnown
 				ifTrue: [  "POS badge from MOEDICT, hover for English name"word moedictEntry
 						ifNotNil: [ :e | 
@@ -274,11 +274,11 @@ ChineseClipboard >> buildSegmentedChipFor: word font: cjkFont [
 				text: word definition ]) ].
 	chip addChild: (BrLabel new
 		aptitude: (BrGlamorousLabelAptitude new fontSize: 50);
-		text: ((self displayTextFor: word) fontName: cjkFont)).
+		text: (word toneColoredText fontName: cjkFont)).
 	word isKnown ifTrue: [
 		chip addChild: (BrLabel new
 			aptitude: (BrGlamorousLabelAptitude new fontSize: 20);
-			text: (((self pronunciationFor: word) asRopedText fontName: cjkFont) foreground: Color gray)) ].
+			text: ((word pronunciation asRopedText fontName: cjkFont) foreground: Color gray)) ].
 	^ chip
 ]
 
@@ -311,9 +311,9 @@ ChineseClipboard >> buildWordListSelect: selectWord on: anAnnouncer [
 	list := BrColumnedList new matchParent.
 	list rowStencil: BrGlamorousColumnedListSelectableRowElementStencilBuilder new.
 	(list column title: 'Word'; width: 120) stencil: (labelStencil value: [ :w |
-		((self displayTextFor: w) fontName: cjkFont) fontSize: 20 ]).
-	(list column title: 'BoPoMoFo'; width: 120) stencil: (labelStencil value: [ :w |
-		((self pronunciationFor: w) asRopedText fontName: cjkFont) fontSize: 12 ]).
+		(w toneColoredText fontName: cjkFont) fontSize: 20 ]).
+	(list column title: self wordClass pronunciationLabel; width: 120) stencil: (labelStencil value: [ :w |
+		(w pronunciation asRopedText fontName: cjkFont) fontSize: 12 ]).
 	(list column title: 'Definition') stencil: (labelStencil value: [ :w | w definition ]).
 	list items: (words select: #isKnown).
 	list when: BrSelectionDoubleClicked do: [ :evt |
@@ -349,36 +349,21 @@ ChineseClipboard >> containsChinese: aString [
 
 { #category : 'display mode' }
 ChineseClipboard >> displayFont [
-	"I return the CJK font name appropriate for the current display mode."
-	^ simplified == true
-		ifTrue: [ CeDictEntry simplifiedFontName ]
-		ifFalse: [ CeDictEntry cjkFontName ]
+	"I return the CJK font name for the current display mode, delegating to the wordClass (TraditionalWord or SimplifiedWord)."
+	^ (wordClass ifNil: [ TraditionalWord ]) displayFont
 ]
 
 { #category : 'display mode' }
-ChineseClipboard >> displayTextFor: word [
-	"I return tone-colored RopedText for word in the current display mode: simplified characters when simplified is true, traditional otherwise."
-	^ simplified == true
-		ifTrue: [ word toneColoredSimplifiedText ]
-		ifFalse: [ word toneColoredText ]
+ChineseClipboard >> switchToWordClass: aClass [
+	"I switch the display mode by converting all existing words to the new class and re-announcing. processText: will also use the new class for future segmentations."
+	wordClass := aClass.
+	words ifNotNil: [ words := words collect: aClass convertSelector ].
+	self announcer announce: ValueChanged new
 ]
 
 { #category : 'display mode' }
-ChineseClipboard >> pronunciationFor: word [
-	"I return the pronunciation string for word in the current display mode: pinyin when simplified is true, bopomofo otherwise."
-	^ simplified == true
-		ifTrue: [ word pinyin ]
-		ifFalse: [ word bopomofo ]
-]
-
-{ #category : 'display mode' }
-ChineseClipboard >> simplified [
-	^ simplified
-]
-
-{ #category : 'display mode' }
-ChineseClipboard >> simplified: aBoolean [
-	simplified := aBoolean
+ChineseClipboard >> wordClass [
+	^ wordClass ifNil: [ TraditionalWord ]
 ]
 
 { #category : 'accessing' }
@@ -407,10 +392,11 @@ ChineseClipboard >> gtActionSimplifiedFor: anAction [
 	^ anAction explicit
 		stencil: [
 			self
-				buildSimplifiedToggleWithSetter: [ :v |
-					simplified := v.
-					self announcer announce: ValueChanged new ]
-				getter: [ simplified ] ]
+				buildSimplifiedToggleWithSetter: [ :isSimplified |
+					self switchToWordClass: (isSimplified
+						ifTrue: [ SimplifiedWord ]
+						ifFalse: [ TraditionalWord ]) ]
+				getter: [ self wordClass isSimplified ] ]
 ]
 
 { #category : 'private' }
@@ -500,9 +486,9 @@ ChineseClipboard >> gtWordListFor: aView [
 		updateWhen: ValueChanged in: [ self announcer ];
 		items: [ words ifNil: [ #() ] ifNotNil: [ words select: #isKnown ] ];
 		column: 'Word' text: [ :w |
-			((self displayTextFor: w) fontName: cjkFont) fontSize: 20 ] width: 120;
-		column: 'BoPoMoFo' text: [ :w |
-			((self pronunciationFor: w) asRopedText fontName: cjkFont) fontSize: 14 ] width: 120;
+			(w toneColoredText fontName: cjkFont) fontSize: 20 ] width: 120;
+		column: self wordClass pronunciationLabel text: [ :w |
+			(w pronunciation asRopedText fontName: cjkFont) fontSize: 14 ] width: 120;
 		column: 'Definition' text: [ :w | w definition ]
 ]
 
@@ -524,9 +510,9 @@ ChineseClipboard >> printOn: aStream [
 
 { #category : 'actions' }
 ChineseClipboard >> processText: aString [
-	"I segment Chinese text and store the results."
+	"I segment Chinese text and convert all tokens to the current display mode (TraditionalWord or SimplifiedWord)."
 	lastText := aString.
-	words := dict segment: aString.
+	words := (dict segment: aString) collect: self wordClass convertSelector.
 	self announcer announce: ValueChanged new
 ]
 

@@ -10,6 +10,30 @@ Class {
 	#tag : 'Model'
 }
 
+{ #category : 'display mode' }
+ChineseWord class >> pronunciationLabel [
+	"I return the human-readable label for the pronunciation column."
+	self subclassResponsibility
+]
+
+{ #category : 'display mode' }
+ChineseWord class >> convertSelector [
+	"I return the selector to send to a token to convert it into my display mode."
+	self subclassResponsibility
+]
+
+{ #category : 'display mode' }
+ChineseWord class >> displayFont [
+	"I return the CJK font name appropriate for my display mode."
+	self subclassResponsibility
+]
+
+{ #category : 'display mode' }
+ChineseWord class >> isSimplified [
+	"I return whether I represent the simplified display mode."
+	self subclassResponsibility
+]
+
 { #category : 'instance creation' }
 ChineseWord class >> text: aString entries: aCollection [
 	^ self new
@@ -37,7 +61,7 @@ ChineseWord >> breakdown [
 	"I return my characters as individual ChineseWords looked up in the dict."
 	text size <= 1 ifTrue: [ ^ #() ].
 	dict ifNil: [ ^ #() ].
-	^ (1 to: text size) collect: [ :i | dict word: (text at: i) asString ]
+	^ (1 to: text size) collect: [ :i | self convertToMyMode: (dict word: (text at: i) asString) ]
 ]
 
 { #category : 'accessing' }
@@ -71,15 +95,15 @@ ChineseWord >> gtBreakdownFor: aView [
 	| parts cjkFont |
 	parts := self breakdown.
 	parts ifEmpty: [ ^ aView empty ].
-	cjkFont := CeDictEntry cjkFontName.
+	cjkFont := self class displayFont.
 	^ aView columnedList
 		title: 'Breakdown';
 		priority: 10;
 		items: [ parts ];
 		column: 'Character' text: [ :w |
 			(w toneColoredText fontName: cjkFont) fontSize: 24 ] width: 60;
-		column: 'BoPoMoFo' text: [ :w |
-			w bopomofo asRopedText fontName: cjkFont ] width: 100;
+		column: self class pronunciationLabel text: [ :w |
+			w pronunciation asRopedText fontName: cjkFont ] width: 100;
 		column: 'Definition' text: [ :w | w definition ];
 		column: 'Other readings' text: [ :w |
 			w entries size > 1
@@ -93,15 +117,15 @@ ChineseWord >> gtDefinitionsFor: aView [
 	<gtView>
 	| cjkFont |
 	entries ifEmpty: [ ^ aView empty ].
-	cjkFont := CeDictEntry cjkFontName.
+	cjkFont := self class displayFont.
 	^ aView columnedList
 		title: 'Definitions';
 		priority: 5;
 		items: [ entries ];
 		column: 'Word' text: [ :e |
-			e toneColoredTraditional fontName: cjkFont ] width: 60;
-		column: 'BoPoMoFo' text: [ :e |
-			e bopomofo asRopedText fontName: cjkFont ] width: 120;
+			(self displayTextOf: e) fontName: cjkFont ] width: 60;
+		column: self class pronunciationLabel text: [ :e |
+			(self pronunciationOf: e) asRopedText fontName: cjkFont ] width: 120;
 		column: 'Definition' text: [ :e | '; ' join: e definitions ];
 		send: [ :e | e ]
 ]
@@ -123,13 +147,13 @@ ChineseWord >> gtMoedictFor: aView [
 ChineseWord >> gtOverviewFor: aView [
 	<gtView>
 	| cjkFont |
-	cjkFont := CeDictEntry cjkFontName.
+	cjkFont := self class displayFont.
 	^ aView columnedList
 		title: 'Overview';
 		priority: 1;
 		items: [ {
 			{ 'Text'. (self toneColoredText fontName: cjkFont) fontSize: 24 }.
-			{ 'BoPoMoFo'. self bopomofo asRopedText fontName: cjkFont }.
+			{ self class pronunciationLabel. self pronunciation asRopedText fontName: cjkFont }.
 			{ 'Definition'. self definition }.
 			{ 'Entries'. entries size asString } } ];
 		column: 'Property' text: #first;
@@ -169,18 +193,57 @@ ChineseWord >> printOn: aStream [
 		aStream nextPutAll: ' ['; nextPutAll: self bopomofo; nextPut: $] ]
 ]
 
+{ #category : 'conversion' }
+ChineseWord >> asSimplified [
+	self subclassResponsibility
+]
+
+{ #category : 'conversion' }
+ChineseWord >> asTraditional [
+	self subclassResponsibility
+]
+
+{ #category : 'conversion' }
+ChineseWord >> convertToMyMode: aWord [
+	"I convert aWord into the same display mode as myself. TraditionalWord sends asTraditional, SimplifiedWord sends asSimplified. No type tests — pure dispatch."
+	self subclassResponsibility
+]
+
 { #category : 'accessing' }
-ChineseWord >> toneColoredSimplifiedText [
-	"I return my simplified text as RopedText with each character colored by its pinyin tone."
-	entries ifEmpty: [ ^ text asRopedText ].
-	^ self preferredEntry toneColoredSimplified
+ChineseWord >> displayTextOf: aCeDictEntry [
+	"I return tone-colored text from aCeDictEntry for my display mode. TraditionalWord returns toneColoredTraditional, SimplifiedWord returns toneColoredSimplified."
+	self subclassResponsibility
+]
+
+{ #category : 'accessing' }
+ChineseWord >> pronunciationOf: aCeDictEntry [
+	"I return the pronunciation string from aCeDictEntry appropriate for my display mode. TraditionalWord returns bopomofo, SimplifiedWord returns pinyin."
+	self subclassResponsibility
+]
+
+{ #category : 'accessing' }
+ChineseWord >> knownPronunciation [
+	"I return the pronunciation string for a known word. TraditionalWord returns bopomofo, SimplifiedWord returns pinyin."
+	self subclassResponsibility
+]
+
+{ #category : 'accessing' }
+ChineseWord >> pronunciation [
+	"I return the mode-appropriate pronunciation for this word: bopomofo for traditional, pinyin for simplified. The raw accessors bopomofo and pinyin remain available for direct access."
+	^ entries ifEmpty: [ '' ] ifNotEmpty: [ self knownPronunciation ]
+]
+
+{ #category : 'accessing' }
+ChineseWord >> toneColoredKnownText [
+	"I return tone-colored text for a known word. TraditionalWord uses traditional chars, SimplifiedWord uses simplified chars."
+	self subclassResponsibility
 ]
 
 { #category : 'accessing' }
 ChineseWord >> toneColoredText [
-	"I return my text as RopedText with each character colored by its tone. The preferred entry's traditional form is what I render."
+	"I return my text as RopedText with each character colored by its tone. Delegates to toneColoredKnownText which TraditionalWord and SimplifiedWord each implement for their character form."
 	entries ifEmpty: [ ^ text asRopedText ].
-	^ self preferredEntry toneColoredTraditional
+	^ self toneColoredKnownText
 ]
 
 { #category : 'accessing' }

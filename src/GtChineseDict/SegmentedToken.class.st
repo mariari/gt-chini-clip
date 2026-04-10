@@ -71,10 +71,16 @@ SegmentedToken >> text: aString [
 	text := aString
 ]
 
-{ #category : 'accessing' }
-SegmentedToken >> toneColoredSimplifiedText [
-	"I return my text as a RopedText for simplified display. Default is plain (no tone coloring); ChineseWord overrides to color each character by its pinyin tone using the simplified character form."
-	^ text asRopedText
+{ #category : 'conversion' }
+SegmentedToken >> asSimplified [
+	"Non-Chinese tokens are mode-agnostic; they return self."
+	^ self
+]
+
+{ #category : 'conversion' }
+SegmentedToken >> asTraditional [
+	"Non-Chinese tokens are mode-agnostic; they return self."
+	^ self
 ]
 
 { #category : 'accessing' }

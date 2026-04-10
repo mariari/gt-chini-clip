@@ -125,8 +125,8 @@ CustomDict >> cjkTokenAt: pos in: aString [
 			candidate := aString copyFrom: pos to: end.
 			matches := baseDict ifNil: [ #() ] ifNotNil: [ baseDict lookup: candidate ].
 			matches ifNotEmpty: [
-				^ ChineseWord text: candidate entries: matches dict: self ] ] ].
-	^ ChineseWord text: (aString at: pos) asString entries: #() dict: self
+				^ TraditionalWord text: candidate entries: matches dict: self ] ] ].
+	^ TraditionalWord text: (aString at: pos) asString entries: #() dict: self
 ]
 
 { #category : 'accessing' }
@@ -166,7 +166,7 @@ CustomDict >> ownLongestMatchAt: pos in: aString [
 			candidate := aString copyFrom: pos to: end.
 			matches := super lookup: candidate.
 			matches isEmpty ifFalse: [
-				^ ChineseWord text: candidate entries: matches dict: self ] ] ].
+				^ TraditionalWord text: candidate entries: matches dict: self ] ] ].
 	^ nil
 ]
 
